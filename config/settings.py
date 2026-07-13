@@ -66,8 +66,7 @@ INSTALLED_APPS = [
     "apps.accounts",
     "apps.common",
     "apps.sites",
-    "apps.pages",
-    "apps.media_manager",    
+    "apps.pages",  
 ]
 
 MIDDLEWARE = [
@@ -150,3 +149,5 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
