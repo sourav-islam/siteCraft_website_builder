@@ -1,0 +1,7 @@
+Important note
+Right now this app is only an exporter. It does not yet:
+
+parse the HTML into blog posts,
+save content into the database,
+download images,
+clean/transform the content.

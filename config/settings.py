@@ -67,6 +67,7 @@ INSTALLED_APPS = [
     "apps.common",
     "apps.sites",
     "apps.pages",  
+    "apps.blog_migration",
 ]
 
 MIDDLEWARE = [
