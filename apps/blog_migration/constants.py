@@ -13,8 +13,4 @@ MEDIA_ROOT = Path("media")
 
 MIGRATION_DIR = MEDIA_ROOT / "migration"
 
-RAW_HTML_FILE = MIGRATION_DIR / "raw.html"
-
-GOOGLE_DOC_EXPORT_URL = (
-    "https://docs.google.com/document/d/{doc_id}/export?format=html"
-)
+GOOGLE_DOC_EXPORT_URL = "https://docs.google.com/document/d/{doc_id}/export?format=html&tab={tab_id}"
