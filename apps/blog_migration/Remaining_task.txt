@@ -1,7 +1,77 @@
-Important note
-Right now this app is only an exporter. It does not yet:
+Project overview
 
-parse the HTML into blog posts,
-save content into the database,
-download images,
-clean/transform the content.
+This repository is a Django-based website builder backend with JWT authentication,
+site management, page management, and a Google Docs migration utility.
+
+Main apps
+- accounts: custom user model and JWT auth integration
+- sites: user-owned website records
+- pages: pages that belong to sites and store builder content in a JSON field
+- blog_migration: utility app that imports public Google Docs tabs into Page records
+- common: shared permissions, validators, and exceptions
+
+What blog_migration does now
+
+The blog migration flow is no longer only an exporter. It currently:
+- accepts a public Google Docs URL
+- accepts one or more Google Docs tab IDs
+- exports each tab as HTML
+- saves raw exported HTML files into media/migration/
+- parses the exported HTML to extract title, body, and images
+- downloads image assets into media/pages/imports/<slug>/
+- cleans Google Docs specific markup and swaps image sources to local media URLs
+- creates one Page record per tab in the pages app
+- stores cleaned HTML in Page.content as {"html": "<cleaned html>"}
+
+Overall working flow
+
+1. User provides:
+   - Google Docs document URL
+   - target site ID
+   - comma-separated tab IDs
+
+2. Management command runs:
+   python manage.py migrate_blog "<google-doc-url>" --site-id <site_id> --tabs "t.0,t.1,t.2"
+
+3. For each tab:
+   - extract Google document ID from the URL
+   - call the Google Docs HTML export endpoint with the tab parameter
+   - save raw HTML as media/migration/raw_<tab_id>.html
+   - parse title, body content, and image tags
+   - download images from HTTP URLs or decode base64 data URLs
+   - store images under media/pages/imports/<page-slug>/
+   - clean HTML by removing Google Docs styles/classes/ids/inline styles
+   - replace exported image src values with local media URLs
+   - remove empty wrapper tags
+   - create a Page row for the selected Site
+
+4. Final database result:
+   - one new Page per successfully migrated tab
+   - content saved in the pages_page.content JSON field
+   - slug generated from the tab title
+
+Current output locations
+- raw HTML exports: media/migration/
+- downloaded images: media/pages/imports/
+
+Important assumptions
+- the Google Doc must be publicly accessible
+- tab IDs must be verified manually from the Google Docs URL
+- migrated content is saved as HTML wrapped inside the Page JSON content field
+- the frontend or renderer must know how to display the {"html": "..."} structure
+
+Current project workflow
+
+1. Authenticate through JWT endpoints under api/auth/
+2. Create or manage sites through api/sites/
+3. Create or manage pages through api/pages/
+4. Use blog_migration to import external Google Docs content into the pages system
+5. Serve media files from the Django media directory in development
+
+What still needs improvement
+- add automated tests for the migration pipeline
+- make tab discovery easier or partially automated
+- improve error reporting for failed image downloads
+- add richer HTML normalization rules
+- validate migrated output against frontend rendering expectations
+- document deployment and production media handling
