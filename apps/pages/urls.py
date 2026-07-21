@@ -1,13 +1,26 @@
-from rest_framework.routers import DefaultRouter
+from django.urls import path
 
-from .views import PageViewSet
-
-router = DefaultRouter()
-
-router.register(
-    "",
-    PageViewSet,
-    basename="page",
+from .views import (
+    PageListCreateAPIView,
+    PageRetrieveUpdateDestroyAPIView,
+    PageLockAPIView,
 )
 
-urlpatterns = router.urls
+
+urlpatterns = [
+    path(
+        "",
+        PageListCreateAPIView.as_view(),
+        name="page-list",
+    ),
+    path(
+        "<int:pk>/",
+        PageRetrieveUpdateDestroyAPIView.as_view(),
+        name="page-detail",
+    ),
+    path(
+        "<int:pk>/lock/",
+        PageLockAPIView.as_view(),
+        name="page-lock",
+    ),
+]
