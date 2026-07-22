@@ -1,6 +1,6 @@
 from rest_framework import filters, generics, permissions, status
 from rest_framework.response import Response
-from apps.common.permissions import IsOwner
+from apps.common.permissions import CanDelete, HasUpdate, IsOwner
 from apps.common.services import LockService
 
 from .models import Site
@@ -20,7 +20,7 @@ class SiteListCreateAPIView(generics.ListCreateAPIView):
     ]
     search_fields = [
         "name",
-        "description",
+        "description"
     ]
     ordering_fields = [
         "name",
@@ -46,8 +46,14 @@ class SiteRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = SiteSerializer
     permission_classes = [
         permissions.IsAuthenticated,
-        IsOwner,
     ]
+
+    def get_permissions(self):
+        if self.request.method in ["PUT", "PATCH"]:
+            return [permissions.IsAuthenticated(), HasUpdate()]
+        if self.request.method == "DELETE":
+            return [permissions.IsAuthenticated(), CanDelete()]
+        return [permissions.IsAuthenticated()]
 
     def get_queryset(self):
         return Site.objects.filter(

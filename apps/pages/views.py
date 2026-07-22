@@ -1,6 +1,6 @@
 from rest_framework import filters, generics, permissions, status
 from rest_framework.response import Response
-from apps.common.permissions import IsOwner
+from apps.common.permissions import CanDelete, HasUpdate, IsOwner
 from apps.common.services import LockService
 
 from .models import Page
@@ -47,9 +47,17 @@ class PageRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = PageSerializer
     permission_classes = [
         permissions.IsAuthenticated,
-        IsOwner,
     ]
 
+
+    def get_permissions(self):
+        if self.request.method in ["PUT", "PATCH"]:
+            return [permissions.IsAuthenticated(), HasUpdate()]
+        if self.request.method == "DELETE":
+            return [permissions.IsAuthenticated(), CanDelete()]
+        return [permissions.IsAuthenticated()]
+
+    
     def get_queryset(self):
         return (
             Page.objects
@@ -126,3 +134,33 @@ class PageLockAPIView(generics.GenericAPIView):
                 {"detail": "You cannot release this lock."},
                 status=status.HTTP_403_FORBIDDEN
             )
+
+class PageHeartbeatAPIView(generics.GenericAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+    queryset = Page.objects.all()
+
+    def get_queryset(self):
+        return (
+            Page.objects
+            .select_related("site")
+            .filter(site__owner=self.request.user)
+        )
+    
+    def post(self, request, pk):
+        page = self.get_object()
+        alive = LockService.heartbeat(
+            "page",
+            page.id,
+            request.user.id,
+        )  
+        if alive:
+            return Response({
+                "detail": "Heartbeat received."
+            })
+        
+        return Response(
+            {
+                "detail": "Lock not found or you are not the owner."
+            },
+            status=status.HTTP_403_FORBIDDEN
+        )

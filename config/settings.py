@@ -163,4 +163,4 @@ MEDIA_ROOT = BASE_DIR / "media"
 REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
 REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
 REDIS_DB = int(os.getenv("REDIS_DB", 0))
-LOCK_TTL = int(os.getenv("LOCK_TTL", 300))  # 5 minutes in seconds
+LOCK_TTL = int(os.getenv("LOCK_TTL", 120))  # 2 minutes in seconds

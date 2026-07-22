@@ -121,3 +121,24 @@ class LockService:
             "locker": locker,
             "ttl_remaining": ttl_remaining
         }
+    
+
+    @classmethod
+    def heartbeat(cls, resource_type, resource_id, user_id):
+        """
+        Refresh the TTL of an existing lock.
+
+        Returns:
+            bool
+        """
+
+        lock_key = cls.get_lock_key(resource_type, resource_id)
+
+        current_locker = redis_client.get(lock_key)
+
+        if current_locker != str(user_id):
+            return False
+
+        redis_client.expire(lock_key, settings.LOCK_TTL)
+
+        return True
