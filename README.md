@@ -11,7 +11,7 @@ This repository currently provides:
 - JWT-based authentication
 - user-owned site management
 - page management with JSON-based content storage
-- site/page locking and heartbeat support while editing
+- site/page locking, lock status checks, and heartbeat support (TTL refresh) while editing
 - a Google Docs migration pipeline that imports one or more document tabs into
   the `pages` app
 - local media storage for uploaded logos, favicons, and imported page images
@@ -58,14 +58,14 @@ siteCraft_website_builder/
 - Stores a user-owned site record
 - Supports draft, published, and archived statuses
 - Stores branding assets such as `logo` and `favicon`
-- Includes lock endpoints for edit protection
+- Includes lock, lock-status, and heartbeat endpoints for collaborative edit protection
 
 ### pages
 - Stores site pages
 - Uses a `JSONField` for flexible page content
 - Supports homepage and publish flags
 - Enforces unique slug per site
-- Includes lock and heartbeat endpoints for collaborative editing
+- Includes lock, lock-status, and heartbeat endpoints for collaborative editing
 
 ### blog_migration
 - Accepts a public Google Docs URL plus one or more tab IDs
@@ -84,8 +84,8 @@ siteCraft_website_builder/
 All API routes are prefixed with `/api/v1/`.
 
 ### Authentication
-- `POST /api/v1/auth/token/`
-- `POST /api/v1/auth/token/refresh/`
+- `POST /api/v1/auth/login/`
+- `POST /api/v1/auth/login/refresh/`
 - `POST /api/v1/auth/register/`
 - `GET /api/v1/auth/profile/`
 
@@ -99,8 +99,10 @@ All API routes are prefixed with `/api/v1/`.
 - `PUT /api/v1/sites/<id>/`
 - `PATCH /api/v1/sites/<id>/`
 - `DELETE /api/v1/sites/<id>/`
-- `POST /api/v1/sites/<id>/lock/`
-- `DELETE /api/v1/sites/<id>/lock/`
+- `GET /api/v1/sites/<id>/lock/` — check current lock status
+- `POST /api/v1/sites/<id>/lock/` — acquire edit lock
+- `DELETE /api/v1/sites/<id>/lock/` — release edit lock
+- `POST /api/v1/sites/<id>/heartbeat/` — refresh lock TTL (keep-alive)
 
 ### Pages
 - `GET /api/v1/pages/`
@@ -109,9 +111,10 @@ All API routes are prefixed with `/api/v1/`.
 - `PUT /api/v1/pages/<id>/`
 - `PATCH /api/v1/pages/<id>/`
 - `DELETE /api/v1/pages/<id>/`
-- `POST /api/v1/pages/<id>/lock/`
-- `DELETE /api/v1/pages/<id>/lock/`
-- `POST /api/v1/pages/<id>/heartbeat/`
+- `GET /api/v1/pages/<id>/lock/` — check current lock status
+- `POST /api/v1/pages/<id>/lock/` — acquire edit lock
+- `DELETE /api/v1/pages/<id>/lock/` — release edit lock
+- `POST /api/v1/pages/<id>/heartbeat/` — refresh lock TTL (keep-alive)
 
 Most API routes are protected by authentication by default. Public access is
 limited to registration, login, token refresh, and health check.

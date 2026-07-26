@@ -1,6 +1,7 @@
 import redis
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 
 User = get_user_model()
 
@@ -11,6 +12,17 @@ redis_client = redis.Redis(
     db=settings.REDIS_DB,
     decode_responses=True  # Automatically decode bytes to strings
 )
+
+
+def _serialize_locker(locker):
+    """Convert a User instance to a lightweight dict suitable for JSON responses."""
+    if locker is None:
+        return None
+    return {
+        "id": locker.id,
+        "username": locker.username,
+        "email": locker.email,
+    }
 
 
 class LockService:
@@ -49,7 +61,21 @@ class LockService:
         )
 
         if lock_acquired:
-            return {"success": True}
+            try:
+                user = User.objects.get(id=user_id)
+            except User.DoesNotExist:
+                user = None
+            return {
+                "success": True,
+                "lock_key": lock_key,
+                "resource_type": resource_type,
+                "resource_id": resource_id,
+                "locked": True,
+                "locker": _serialize_locker(user),
+                "ttl_seconds": ttl,
+                "ttl_remaining": ttl,
+                "acquired_at": timezone.now().isoformat(),
+            }
 
         # Lock already exists, get locker info
         locker_id = redis_client.get(lock_key)
@@ -64,8 +90,12 @@ class LockService:
 
         return {
             "success": False,
-            "locker": locker,
-            "ttl_remaining": ttl_remaining
+            "lock_key": lock_key,
+            "resource_type": resource_type,
+            "resource_id": resource_id,
+            "locked": True,
+            "locker": _serialize_locker(locker),
+            "ttl_remaining": ttl_remaining,
         }
 
     @classmethod
@@ -79,16 +109,61 @@ class LockService:
             user_id: ID of the user trying to release the lock
         
         Returns:
-            bool: Whether the lock was successfully released
+            dict: Rich result with success flag, reason, lock info, and locker
         """
         lock_key = cls.get_lock_key(resource_type, resource_id)
         current_locker_id = redis_client.get(lock_key)
 
-        if current_locker_id and current_locker_id == str(user_id):
-            redis_client.delete(lock_key)
-            return True
+        # No lock exists at all
+        if not current_locker_id:
+            return {
+                "success": False,
+                "reason": "no_lock",
+                "message": "No active lock exists for this resource.",
+                "lock_key": lock_key,
+                "resource_type": resource_type,
+                "resource_id": resource_id,
+                "locked": False,
+                "locker": None,
+            }
 
-        return False
+        # Another user holds the lock
+        if current_locker_id != str(user_id):
+            try:
+                locker = User.objects.get(id=current_locker_id)
+            except User.DoesNotExist:
+                locker = None
+            ttl_remaining = redis_client.ttl(lock_key)
+            return {
+                "success": False,
+                "reason": "not_owner",
+                "message": "You cannot release this lock — it is held by another user.",
+                "lock_key": lock_key,
+                "resource_type": resource_type,
+                "resource_id": resource_id,
+                "locked": True,
+                "locker": _serialize_locker(locker),
+                "ttl_remaining": ttl_remaining,
+            }
+
+        # Requesting user holds the lock — release it
+        redis_client.delete(lock_key)
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            user = None
+        return {
+            "success": True,
+            "reason": "released",
+            "message": "Lock released successfully.",
+            "lock_key": lock_key,
+            "resource_type": resource_type,
+            "resource_id": resource_id,
+            "locked": False,
+            "locker": None,
+            "released_by": _serialize_locker(user),
+            "released_at": timezone.now().isoformat(),
+        }
 
     @classmethod
     def get_lock_status(cls, resource_type, resource_id):
@@ -100,13 +175,20 @@ class LockService:
             resource_id: ID of the resource
         
         Returns:
-            dict: Lock status info
+            dict: Rich lock status info
         """
         lock_key = cls.get_lock_key(resource_type, resource_id)
         locker_id = redis_client.get(lock_key)
 
         if not locker_id:
-            return {"locked": False}
+            return {
+                "lock_key": lock_key,
+                "resource_type": resource_type,
+                "resource_id": resource_id,
+                "locked": False,
+                "locker": None,
+                "ttl_remaining": None,
+            }
 
         locker = None
         try:
@@ -117,9 +199,13 @@ class LockService:
         ttl_remaining = redis_client.ttl(lock_key)
 
         return {
+            "lock_key": lock_key,
+            "resource_type": resource_type,
+            "resource_id": resource_id,
             "locked": True,
-            "locker": locker,
-            "ttl_remaining": ttl_remaining
+            "locker": _serialize_locker(locker),
+            "ttl_remaining": ttl_remaining,
+            "ttl_seconds": settings.LOCK_TTL,
         }
     
 
@@ -129,16 +215,61 @@ class LockService:
         Refresh the TTL of an existing lock.
 
         Returns:
-            bool
+            dict: Rich result with success flag, message, and full lock info
         """
 
         lock_key = cls.get_lock_key(resource_type, resource_id)
+        current_locker_id = redis_client.get(lock_key)
+        ttl = settings.LOCK_TTL
 
-        current_locker = redis_client.get(lock_key)
+        # No lock exists
+        if not current_locker_id:
+            return {
+                "success": False,
+                "reason": "no_lock",
+                "message": "No active lock exists for this resource — acquire a lock first.",
+                "lock_key": lock_key,
+                "resource_type": resource_type,
+                "resource_id": resource_id,
+                "locked": False,
+                "locker": None,
+            }
 
-        if current_locker != str(user_id):
-            return False
+        # Another user holds the lock
+        if current_locker_id != str(user_id):
+            try:
+                locker = User.objects.get(id=current_locker_id)
+            except User.DoesNotExist:
+                locker = None
+            ttl_remaining = redis_client.ttl(lock_key)
+            return {
+                "success": False,
+                "reason": "not_owner",
+                "message": "You cannot refresh this lock — it is held by another user.",
+                "lock_key": lock_key,
+                "resource_type": resource_type,
+                "resource_id": resource_id,
+                "locked": True,
+                "locker": _serialize_locker(locker),
+                "ttl_remaining": ttl_remaining,
+            }
 
-        redis_client.expire(lock_key, settings.LOCK_TTL)
-
-        return True
+        # Requesting user holds the lock — refresh TTL
+        redis_client.expire(lock_key, ttl)
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            user = None
+        return {
+            "success": True,
+            "reason": "refreshed",
+            "message": "Heartbeat received — lock TTL refreshed successfully.",
+            "lock_key": lock_key,
+            "resource_type": resource_type,
+            "resource_id": resource_id,
+            "locked": True,
+            "locker": _serialize_locker(user),
+            "ttl_seconds": ttl,
+            "ttl_remaining": ttl,
+            "refreshed_at": timezone.now().isoformat(),
+        }

@@ -8,8 +8,8 @@ from .views import (
 )
 
 urlpatterns = [
-    path("token/", LoginAPIView.as_view(), name="token_obtain_pair"),
-    path("token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
+    path("login/", LoginAPIView.as_view(), name="token_obtain_pair"),
+    path("login/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
     path("register/", RegisterAPIView.as_view(), name="user_register"),
     path("profile/", UserProfileAPIView.as_view(), name="user_profile"),
 ]
