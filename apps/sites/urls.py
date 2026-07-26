@@ -1,6 +1,7 @@
 from django.urls import path
 
 from .views import (
+    SiteHeartbeatAPIView,
     SiteListCreateAPIView,
     SiteRetrieveUpdateDestroyAPIView,
     SiteLockAPIView,
@@ -22,5 +23,10 @@ urlpatterns = [
         "<int:pk>/lock/",
         SiteLockAPIView.as_view(),
         name="site-lock",
+    ),
+    path(
+        "<int:pk>/heartbeat/",
+        SiteHeartbeatAPIView.as_view(),
+        name="site-heartbeat",
     ),
 ]
