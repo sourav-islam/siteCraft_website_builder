@@ -2,10 +2,14 @@ from rest_framework import filters, generics, permissions, status
 from rest_framework.response import Response
 from apps.common.permissions import CanDelete, HasUpdate, IsOwner
 from apps.common.services import LockService
-
+from rest_framework.exceptions import ValidationError as DRFValidationError
+from django.shortcuts import get_object_or_404
+from rest_framework.views import APIView
 from .models import Site
 from .serializers import SiteSerializer
 from .services import SiteService
+from apps.common.exceptions import PublishValidationError
+from apps.sites.services.publish_service import PublishService
 
 
 def _site_info(site):
@@ -238,3 +242,47 @@ class SiteHeartbeatAPIView(generics.GenericAPIView):
         if hb_result.get("reason") == "no_lock":
             return Response(base_response, status=status.HTTP_404_NOT_FOUND)
         return Response(base_response, status=status.HTTP_403_FORBIDDEN)
+
+
+class SitePublishAPIView(APIView):
+    permission_classes = [permissions.IsAuthenticated, HasUpdate]
+
+    def get_site(self, pk):
+        return get_object_or_404(Site, pk=pk)
+
+    def _check_lock(self, request, site):
+        lock_status = LockService.get_lock_status("site", site.id)
+        if not lock_status["locked"]:
+            return None
+
+        locker = lock_status.get("locker")
+        locker_name = locker["username"] if locker else "someone"
+        return Response(
+            {
+                "detail": f"This site is currently being edited by {locker_name}.",
+                "code": "site_locked",
+                "site": _site_info(site),
+                "lock": {
+                    "locked": True,
+                    "locker": locker,
+                    "ttl_remaining": lock_status.get("ttl_remaining"),
+                    "lock_key": lock_status.get("lock_key"),
+                },
+            },
+            status=status.HTTP_409_CONFLICT,
+        )
+
+    def post(self, request, pk):
+        site = self.get_site(pk)
+        self.check_object_permissions(request, site)
+
+        lock_response = self._check_lock(request, site)
+        if lock_response is not None:
+            return lock_response
+
+        try:
+            result = PublishService().publish(site)
+        except PublishValidationError as exc:
+            raise DRFValidationError(str(exc))
+
+        return Response(result, status=status.HTTP_200_OK)

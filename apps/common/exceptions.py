@@ -11,3 +11,10 @@ class BadRequest(APIException):
     status_code = 400
     default_detail = "Bad request."
     default_code = "bad_request"
+
+
+class PublishValidationError(Exception):
+    """Raised when a site fails a publish readiness check
+    (missing header/footer, or no enabled pages with HTML)."""
+
+    pass
