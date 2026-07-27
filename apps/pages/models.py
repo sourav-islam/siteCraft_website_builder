@@ -1,10 +1,13 @@
+from django.conf import settings
 from django.db import models
 from django.utils.text import slugify
 
+from apps.common.models import TimeStampedModel
+from apps.common.validators import validate_file_size, validate_html_file_extension
 from apps.sites.models import Site
 
 
-class Page(models.Model):
+class Page(TimeStampedModel):
     """
     Represents a single page of a website.
     Example:
@@ -13,6 +16,11 @@ class Page(models.Model):
         Contact
         Blog
     """
+
+    class Status(models.TextChoices):
+        DRAFT = "draft", "Draft"
+        PUBLISHED = "published", "Published"
+        ARCHIVED = "archived", "Archived"
 
     site = models.ForeignKey(
         Site,
@@ -30,13 +38,59 @@ class Page(models.Model):
         help_text="Stores builder sections/components as JSON.",
     )
 
+    html_file = models.FileField(
+        upload_to="pages/html/",
+        blank=True,
+        null=True,
+        validators=[validate_file_size, validate_html_file_extension],
+        help_text="Published HTML source file for this page.",
+    )
+
+    meta_description = models.TextField(
+        blank=True,
+        default="",
+        help_text="SEO meta description for this page.",
+    )
+
+    page_type = models.CharField(
+        max_length=50,
+        default="standard",
+        help_text="Type classification (e.g. standard, blog, landing).",
+    )
+
     is_homepage = models.BooleanField(default=False)
 
     is_published = models.BooleanField(default=False)
 
-    created_at = models.DateTimeField(auto_now_add=True)
+    is_enabled = models.BooleanField(
+        default=True,
+        help_text="Only enabled pages are included in publish.",
+    )
 
-    updated_at = models.DateTimeField(auto_now=True)
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.DRAFT,
+    )
+
+
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="pages_created",
+        help_text="User who initially created the page.",
+    )
+
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="pages_updated",
+        help_text="User who last modified the page.",
+    )
 
     class Meta:
         ordering = ["created_at"]

@@ -1,8 +1,19 @@
 from django.conf import settings
 from django.db import models
 
+from apps.common.validators import validate_file_size, validate_html_file_extension
 
-class Site(models.Model):
+from apps.common.models import TimeStampedModel
+
+
+class Site(TimeStampedModel):
+    """
+    Represents a single website.
+    Example:
+        siteCraft
+        MyBlog
+        MyPortfolio
+    """
 
     class Status(models.TextChoices):
         DRAFT = "draft", "Draft"
@@ -31,6 +42,22 @@ class Site(models.Model):
         null=True,
     )
 
+    header = models.FileField(
+        upload_to="sites/header/",
+        blank=True,
+        null=True,
+        validators=[validate_file_size, validate_html_file_extension],
+        help_text="Header HTML file for the published site.",
+    )
+
+    footer = models.FileField(
+        upload_to="sites/footer/",
+        blank=True,
+        null=True,
+        validators=[validate_file_size, validate_html_file_extension],
+        help_text="Footer HTML file for the published site.",
+    )
+
     status = models.CharField(
         max_length=20,
         choices=Status.choices,
@@ -39,9 +66,23 @@ class Site(models.Model):
 
     is_public = models.BooleanField(default=False)
 
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="sites_created",
+        help_text="User who initially created the site.",
+    )
 
-    updated_at = models.DateTimeField(auto_now=True)
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="sites_updated",
+        help_text="User who last modified the site.",
+    )
 
     class Meta:
         ordering = ["-created_at"]
