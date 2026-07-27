@@ -238,3 +238,58 @@ class SiteHeartbeatAPIView(generics.GenericAPIView):
         if hb_result.get("reason") == "no_lock":
             return Response(base_response, status=status.HTTP_404_NOT_FOUND)
         return Response(base_response, status=status.HTTP_403_FORBIDDEN)
+
+
+class SitePublishAPIView(generics.GenericAPIView):
+    permission_classes = [permissions.IsAuthenticated, HasUpdate]
+    queryset = Site.objects.all()
+    serializer_class = SiteSerializer
+
+    def get_queryset(self):
+        return Site.objects.filter(owner=self.request.user)
+
+    def post(self, request, pk):
+        site = self.get_object()
+
+        lock_status = LockService.get_lock_status("site", site.id)
+        if lock_status["locked"]:
+            locker = lock_status.get("locker") or {}
+            if locker and locker.get("id") != request.user.id:
+                locker_name = locker.get("username") or "someone"
+                return Response(
+                    {
+                        "detail": f"Site is locked by {locker_name}; ask them to release or wait for lock expiry.",
+                        "code": "site_locked",
+                        "site": _site_info(site),
+                        "lock": {
+                            "locked": True,
+                            "locker": locker,
+                            "ttl_remaining": lock_status.get("ttl_remaining"),
+                            "lock_key": lock_status.get("lock_key"),
+                        },
+                    },
+                    status=status.HTTP_423_LOCKED,
+                )
+
+        from django.core.exceptions import ValidationError as DjValidationError
+        from apps.sites.services import PublishService
+
+        try:
+            svc = PublishService(request=request)
+            result = svc.publish(site)
+        except DjValidationError as exc:
+            errors = exc.message_dict if hasattr(exc, "message_dict") else {"detail": exc.messages}
+            return Response(
+                {"detail": "Publish validation failed.", "errors": errors},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        except Exception as exc:
+            return Response(
+                {
+                    "detail": "Publish failed unexpectedly.",
+                    "errors": {"detail": [str(exc)]},
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        return Response(result, status=status.HTTP_200_OK)

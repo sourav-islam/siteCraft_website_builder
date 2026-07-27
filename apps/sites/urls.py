@@ -5,6 +5,7 @@ from .views import (
     SiteListCreateAPIView,
     SiteRetrieveUpdateDestroyAPIView,
     SiteLockAPIView,
+    SitePublishAPIView,
 )
 
 
@@ -28,5 +29,10 @@ urlpatterns = [
         "<int:pk>/heartbeat/",
         SiteHeartbeatAPIView.as_view(),
         name="site-heartbeat",
+    ),
+    path(
+        "<int:pk>/publish/",
+        SitePublishAPIView.as_view(),
+        name="site-publish",
     ),
 ]
