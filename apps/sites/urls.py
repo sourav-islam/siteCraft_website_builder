@@ -31,7 +31,8 @@ urlpatterns = [
         name="site-heartbeat",
     ),
     path(
-        "<int:pk>/publish/", 
-        SitePublishAPIView.as_view(), 
-        name="site-publish"),
+        "<int:pk>/publish/",
+        SitePublishAPIView.as_view(),
+        name="site-publish",
+    ),
 ]

@@ -13,6 +13,8 @@ class SiteSerializer(serializers.ModelSerializer):
             "owner",
             "created_at",
             "updated_at",
+            "created_by",
+            "updated_by",
         )
 
         fields = "__all__"
