@@ -3,8 +3,6 @@ from rest_framework.response import Response
 from apps.common.permissions import CanDelete, HasUpdate, IsOwner
 from apps.common.services import LockService
 from rest_framework.exceptions import ValidationError as DRFValidationError
-from django.shortcuts import get_object_or_404
-from rest_framework.views import APIView
 from .models import Site
 from .serializers import SiteSerializer
 from .services import SiteService
@@ -244,11 +242,9 @@ class SiteHeartbeatAPIView(generics.GenericAPIView):
         return Response(base_response, status=status.HTTP_403_FORBIDDEN)
 
 
-class SitePublishAPIView(APIView):
+class SitePublishAPIView(generics.GenericAPIView):
     permission_classes = [permissions.IsAuthenticated, HasUpdate]
-
-    def get_site(self, pk):
-        return get_object_or_404(Site, pk=pk)
+    queryset = Site.objects.all()
 
     def _check_lock(self, request, site):
         lock_status = LockService.get_lock_status("site", site.id)
@@ -273,8 +269,7 @@ class SitePublishAPIView(APIView):
         )
 
     def post(self, request, pk):
-        site = self.get_site(pk)
-        self.check_object_permissions(request, site)
+        site = self.get_object()
 
         lock_response = self._check_lock(request, site)
         if lock_response is not None:

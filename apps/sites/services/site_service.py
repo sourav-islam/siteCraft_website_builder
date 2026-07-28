@@ -1,4 +1,4 @@
-from .models import Site
+from ..models import Site
 
 
 class SiteService:
