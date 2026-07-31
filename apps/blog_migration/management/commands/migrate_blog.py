@@ -1,3 +1,4 @@
+from django.core.files.base import ContentFile
 from django.core.management.base import BaseCommand, CommandError
 from django.utils.text import slugify
 
@@ -55,11 +56,16 @@ class Command(BaseCommand):
         cleaned_html = ContentCleanerService.clean_content(parsed["content"], images)
 
         Reporter.info(f"[{tab_id}] Creating page...")
+        slug = slugify(parsed["title"]) or tab_id
+        html_file = ContentFile(
+            cleaned_html.encode("utf-8"),
+            name=f"{slug}.html",
+        )
         page = PageService.create_page(
             site_id=site_id,
             title=parsed["title"],
-            slug=slugify(parsed["title"]),
-            content={"html": cleaned_html},
+            slug=slug,
+            html_file=html_file,
             is_published=False,
             is_homepage=False,
         )
