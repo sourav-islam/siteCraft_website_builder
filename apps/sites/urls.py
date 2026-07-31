@@ -1,4 +1,4 @@
-from django.urls import path
+from django.urls import include, path
 
 from .views import (
     SiteHeartbeatAPIView,
@@ -16,23 +16,24 @@ urlpatterns = [
         name="site-list",
     ),
     path(
-        "<int:pk>/",
+        "/<int:pk>",
         SiteRetrieveUpdateDestroyAPIView.as_view(),
         name="site-detail",
     ),
     path(
-        "<int:pk>/lock/",
+        "/<int:pk>/lock",
         SiteLockAPIView.as_view(),
         name="site-lock",
     ),
     path(
-        "<int:pk>/heartbeat/",
+        "/<int:pk>/heartbeat",
         SiteHeartbeatAPIView.as_view(),
         name="site-heartbeat",
     ),
     path(
-        "<int:pk>/publish/",
+        "/<int:pk>/publish",
         SitePublishAPIView.as_view(),
         name="site-publish",
     ),
+     path("/<int:site_id>/pages", include("apps.pages.urls")),
 ]
