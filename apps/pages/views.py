@@ -72,6 +72,8 @@ class PageListCreateAPIView(generics.ListCreateAPIView):
         site = self.get_site()
         PageService.create_page(
             site=site,
+            created_by=self.request.user,
+            updated_by=self.request.user,
             **serializer.validated_data,
         )
 
@@ -146,6 +148,7 @@ class PageRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
     def perform_update(self, serializer):
         PageService.update_page(
             serializer.instance,
+            updated_by=self.request.user,
             **serializer.validated_data,
         )
 

@@ -15,8 +15,12 @@ class PageSerializer(serializers.ModelSerializer):
             "title",
             "slug",
             "html_file",
+            "meta_description",
+            "page_type",
             "is_homepage",
             "is_published",
+            "is_enabled",
+            "status",
             "created_by",
             "updated_by",
             "created_at",
@@ -25,6 +29,9 @@ class PageSerializer(serializers.ModelSerializer):
 
         read_only_fields = (
             "id",
+            "site",
+            "is_published",
+            "status",
             "created_at",
             "updated_at",
             "created_by",
