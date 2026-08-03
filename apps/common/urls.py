@@ -4,7 +4,7 @@ from .views import HealthCheckAPIView
 
 urlpatterns = [
     path(
-        "health/",
+        "/health",
         HealthCheckAPIView.as_view(),
         name="health-check",
     ),

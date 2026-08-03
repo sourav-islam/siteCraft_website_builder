@@ -32,11 +32,6 @@ class Page(TimeStampedModel):
 
     slug = models.SlugField(max_length=160)
 
-    content = models.JSONField(
-        default=dict,
-        blank=True,
-        help_text="Stores builder sections/components as JSON.",
-    )
 
     html_file = models.FileField(
         upload_to="pages/html/",

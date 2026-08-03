@@ -14,43 +14,38 @@ class PageSerializer(serializers.ModelSerializer):
             "site",
             "title",
             "slug",
-            "content",
+            "html_file",
+            "meta_description",
+            "page_type",
             "is_homepage",
             "is_published",
+            "is_enabled",
+            "status",
+            "created_by",
+            "updated_by",
             "created_at",
             "updated_at",
         )
 
         read_only_fields = (
             "id",
+            "site",
+            "is_published",
+            "status",
             "created_at",
             "updated_at",
+            "created_by",
+            "updated_by",
         )
 
-    def validate_site(self, value):
-        """
-        A user can only create pages
-        inside their own sites.
-        """
-
-        request = self.context["request"]
-
-        if value.owner != request.user:
-            raise serializers.ValidationError(
-                "You do not own this site."
-            )
-
-        return value
-
+ 
     def validate(self, attrs):
         """
         Only one homepage is allowed per site.
+        Site now comes from the URL (via context), not the request body.
         """
 
-        site = attrs.get(
-            "site",
-            getattr(self.instance, "site", None),
-        )
+        site = self.context.get("site") or getattr(self.instance, "site", None)
 
         is_homepage = attrs.get(
             "is_homepage",

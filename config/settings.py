@@ -81,6 +81,9 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = 'config.urls'
+APPEND_SLASH = False 
+# Enforce no-trailing-slash convention on all API endpoints.
+# Without this, Django's CommonMiddleware will try to redirect
 
 TEMPLATES = [
     {

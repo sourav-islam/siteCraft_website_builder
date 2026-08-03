@@ -15,17 +15,17 @@ urlpatterns = [
         name="page-list",
     ),
     path(
-        "<int:pk>/",
+        "/<int:pk>",
         PageRetrieveUpdateDestroyAPIView.as_view(),
         name="page-detail",
     ),
     path(
-        "<int:pk>/lock/",
+        "/<int:pk>/lock",
         PageLockAPIView.as_view(),
         name="page-lock",
     ),
     path(
-        "<int:pk>/heartbeat/",
+        "/<int:pk>/heartbeat",
         PageHeartbeatAPIView.as_view(),
         name="page-heartbeat",
     ),
