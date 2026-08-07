@@ -36,4 +36,6 @@ urlpatterns = [
         name="site-publish",
     ),
      path("/<int:site_id>/pages", include("apps.pages.urls")),
+    # Nested audit-log route (read-only)
+    path("/<int:site_id>/audit-log", include("apps.audit.urls")),
 ]
