@@ -2,6 +2,7 @@ from rest_framework import filters, generics, permissions, status
 from rest_framework.response import Response
 from apps.common.permissions import CanDelete, HasUpdate, IsOwner
 from apps.common.services import LockService
+from apps.audit.services import AuditService
 from rest_framework.exceptions import ValidationError as DRFValidationError
 from .models import Site
 from .serializers import SiteSerializer
@@ -50,10 +51,12 @@ class SiteListCreateAPIView(generics.ListCreateAPIView):
         )
 
     def perform_create(self, serializer):
-        SiteService.create_site(
+        site = SiteService.create_site(
             owner=self.request.user,
+            actor=self.request.user,
             **serializer.validated_data,
         )
+        serializer.instance = site
 
 
 class SiteRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
@@ -118,7 +121,22 @@ class SiteRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
                 },
                 status=status.HTTP_409_CONFLICT
             )
+        # Must log BEFORE the actual delete — object_id needs a real,
+        # still-valid PK to point at, and the row won't be queryable
+        # via the FK afterward, so capture identifying info now.
+        AuditService.log_delete(
+            site,
+            request.user,
+            metadata={"name": site.name},
+        )
         return super().destroy(request, *args, **kwargs)
+
+    def perform_update(self, serializer):
+        SiteService.update_site(
+            serializer.instance,
+            actor=self.request.user,
+            **serializer.validated_data,
+        )
 
 
 class SiteLockAPIView(generics.GenericAPIView):
@@ -276,7 +294,7 @@ class SitePublishAPIView(generics.GenericAPIView):
             return lock_response
 
         try:
-            result = PublishService().publish(site)
+            result = PublishService().publish(site, actor=request.user)
         except PublishValidationError as exc:
             raise DRFValidationError(str(exc))
 

@@ -3,6 +3,7 @@ import json
 from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
 
+from apps.audit.services import AuditService
 from apps.common.exceptions import PublishValidationError
 from apps.pages.models import Page
 from apps.sites.services.html_minifier import HTMLMinifier
@@ -56,7 +57,7 @@ class PublishService:
         path = f"assets/sites/{site.id}/pages/{page.slug}.json"
         return self._write_json(path, data)
 
-    def publish(self, site):
+    def publish(self, site, actor=None):
         pages = list(
             site.pages.filter(is_enabled=True, html_file__isnull=False).exclude(html_file="")
         )
@@ -80,9 +81,13 @@ class PublishService:
 
             raise
 
-        return {
+        result = {
             "site_id": site.id,
             "status": "published",
             "assets_path": f"assets/sites/{site.id}/",
             "files": written_files,
         }
+
+        AuditService.log_action(site, actor, "published", metadata=result)
+
+        return result
