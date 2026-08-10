@@ -1,6 +1,7 @@
 from django.shortcuts import get_object_or_404
 from rest_framework import filters, generics, permissions, status
 from rest_framework.response import Response
+from apps.audit.services import AuditService
 from apps.common.permissions import CanDelete, HasUpdate, IsOwner
 from apps.common.services import LockService
 from apps.sites.models import Site
@@ -143,6 +144,11 @@ class PageRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
                 },
                 status=status.HTTP_409_CONFLICT
             )
+        AuditService.log_delete(
+            page,
+            request.user,
+            metadata={"title": page.title, "slug": page.slug, "site_id": page.site_id},
+        )
         return super().destroy(request, *args, **kwargs)
 
     def perform_update(self, serializer):
