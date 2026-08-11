@@ -12,10 +12,9 @@ class AuditLogSerializer(serializers.ModelSerializer):
             "id",
             "actor",
             "actor_username",
+            "content_type",
             "action",
-            "field_name",
-            "old_value",
-            "new_value",
+            "changes",
             "metadata",
             "created_at",
         )

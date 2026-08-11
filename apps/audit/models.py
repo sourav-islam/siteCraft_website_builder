@@ -10,8 +10,7 @@ class AuditLog(TimeStampedModel):
     """
     Generic, append-only record of who did what to which object and when.
 
-    One row per changed field on an "updated" action, one row per
-    action for everything else (created / deleted / published / ...).
+    One row per action for updated/created/deleted/published events.
     Never mutated after creation.
     """
 
@@ -30,6 +29,7 @@ class AuditLog(TimeStampedModel):
     object_id = models.PositiveIntegerField()
     content_object = GenericForeignKey("content_type", "object_id")
 
+
     actor = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
@@ -44,15 +44,14 @@ class AuditLog(TimeStampedModel):
         choices=Action.choices,
     )
 
-    field_name = models.CharField(
-        max_length=100,
+    changes = models.JSONField(
         blank=True,
-        default="",
-        help_text="Populated only for 'updated' rows — the field that changed.",
+        default=dict,
+        help_text=(
+            "Field-level diff payload for update actions, keyed by field name. "
+            "Example: {'title': {'old': 'aboutpage', 'new': 'a'}}"
+        ),
     )
-
-    old_value = models.TextField(blank=True, default="")
-    new_value = models.TextField(blank=True, default="")
 
     metadata = models.JSONField(
         blank=True,
@@ -67,6 +66,4 @@ class AuditLog(TimeStampedModel):
         ]
 
     def __str__(self):
-        if self.field_name:
-            return f"{self.action}:{self.field_name} on {self.content_type}#{self.object_id}"
         return f"{self.action} on {self.content_type}#{self.object_id}"
