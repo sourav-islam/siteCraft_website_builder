@@ -1,7 +1,11 @@
 from django.conf import settings
 from django.db import models
 
-from apps.common.validators import validate_file_size, validate_html_file_extension
+from apps.common.validators import (
+    validate_css_file_extension,
+    validate_file_size,
+    validate_html_file_extension,
+)
 
 from apps.common.models import TimeStampedModel
 
@@ -56,6 +60,14 @@ class Site(TimeStampedModel):
         null=True,
         validators=[validate_file_size, validate_html_file_extension],
         help_text="Footer HTML file for the published site.",
+    )
+
+    global_css = models.FileField(
+        upload_to="sites/global_css/",
+        blank=True,
+        null=True,
+        validators=[validate_file_size, validate_css_file_extension],
+        help_text="Global CSS file for the published site.",
     )
 
     status = models.CharField(

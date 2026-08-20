@@ -25,3 +25,15 @@ def validate_html_file_extension(file):
         raise ValidationError(
             "Only .html and .htm files are allowed."
         )
+
+
+def validate_css_file_extension(file):
+    """Validate that an uploaded file has a .css extension."""
+
+    filename = getattr(file, "name", "")
+    ext = os.path.splitext(filename)[1].lower()
+
+    if ext != ".css":
+        raise ValidationError(
+            "Only .css files are allowed."
+        )
