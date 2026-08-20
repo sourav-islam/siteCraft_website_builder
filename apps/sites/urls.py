@@ -6,6 +6,7 @@ from .views import (
     SiteRetrieveUpdateDestroyAPIView,
     SiteLockAPIView,
     SitePublishAPIView,
+    SiteRollbackAPIView,
 )
 
 
@@ -35,7 +36,12 @@ urlpatterns = [
         SitePublishAPIView.as_view(),
         name="site-publish",
     ),
-     path("/<int:site_id>/pages", include("apps.pages.urls")),
+    path(
+        "/<int:pk>/rollback",
+        SiteRollbackAPIView.as_view(),
+        name="site-rollback",
+    ),
+    path("/<int:site_id>/pages", include("apps.pages.urls")),
     # Nested audit-log route (read-only)
     path("/<int:site_id>/audit-log", include("apps.audit.urls")),
 ]

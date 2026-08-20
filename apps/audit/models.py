@@ -19,6 +19,7 @@ class AuditLog(TimeStampedModel):
         UPDATED = "updated", "Updated"
         DELETED = "deleted", "Deleted"
         PUBLISHED = "published", "Published"
+        ROLLED_BACK = "rolled_back", "Rolled back"
         LOCKED = "locked", "Locked"
         UNLOCKED = "unlocked", "Unlocked"
 

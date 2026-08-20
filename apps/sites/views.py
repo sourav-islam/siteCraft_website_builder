@@ -5,7 +5,7 @@ from apps.common.services import LockService
 from apps.audit.services import AuditService
 from rest_framework.exceptions import ValidationError as DRFValidationError
 from .models import Site
-from .serializers import SiteSerializer
+from .serializers import SiteRollbackSerializer, SiteSerializer
 from .services import SiteService
 from apps.common.exceptions import PublishValidationError
 from apps.sites.services.publish_service import PublishService
@@ -295,6 +295,28 @@ class SitePublishAPIView(generics.GenericAPIView):
 
         try:
             result = PublishService().publish(site, actor=request.user)
+        except PublishValidationError as exc:
+            raise DRFValidationError(str(exc))
+
+        return Response(result, status=status.HTTP_200_OK)
+
+
+class SiteRollbackAPIView(generics.GenericAPIView):
+    permission_classes = [permissions.IsAuthenticated, HasUpdate]
+    queryset = Site.objects.all()
+    serializer_class = SiteRollbackSerializer
+
+    def post(self, request, pk):
+        site = self.get_object()
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        try:
+            result = PublishService().rollback(
+                site,
+                serializer.validated_data["version"],
+                actor=request.user,
+            )
         except PublishValidationError as exc:
             raise DRFValidationError(str(exc))
 
