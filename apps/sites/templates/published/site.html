@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ homepage.title|default:site.name }}</title>
+    {% if homepage.meta_description %}
+        <meta name="description" content="{{ homepage.meta_description }}">
+    {% endif %}
+    {% if global_css %}
+        <style>{{ global_css|safe }}</style>
+    {% endif %}
+</head>
+<body>
+    {{ header.html|safe }}
+    {{ homepage.html|safe }}
+    {{ footer.html|safe }}
+</body>
+</html>

@@ -9,6 +9,7 @@ from .serializers import SiteRollbackSerializer, SiteSerializer
 from .services import SiteService
 from apps.common.exceptions import PublishValidationError
 from apps.sites.services.publish_service import PublishService
+from apps.sites.services.render_service import PublishedSiteRenderService
 
 
 def _site_info(site):
@@ -321,3 +322,12 @@ class SiteRollbackAPIView(generics.GenericAPIView):
             raise DRFValidationError(str(exc))
 
         return Response(result, status=status.HTTP_200_OK)
+
+
+class PublishedSiteAPIView(generics.GenericAPIView):
+    permission_classes = [permissions.AllowAny]
+    queryset = Site.objects.all()
+
+    def get(self, request, pk):
+        site = self.get_object()
+        return PublishedSiteRenderService().render_homepage(request, site)
