@@ -239,11 +239,46 @@ class PublishedSiteRenderingTests(TestCase):
         self._set_current(1)
 
         response = self.client.get(
-            f"/api/v1/sites/{self.site.id}/published"
+            f"/sites/{self.site.id}/published/"
         )
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "version-one homepage")
+
+    def test_published_page_slug_url_renders_manifest_page(self):
+        self._create_version(1, "version-one")
+        version_root = f"published/sonder-{self.site.id}/versions/1"
+        manifest_path = Path(self.media_root) / f"{version_root}/manifest.json"
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        manifest["files"]["pages"]["about"] = "pages/about.json"
+        manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+        self._write_json(
+            f"{version_root}/pages/about.json",
+            {
+                "title": "About",
+                "meta_description": "About page",
+                "html": "<main>About page content</main>",
+            },
+        )
+        self._set_current(1)
+
+        response = self.client.get(
+            f"/sites/{self.site.id}/published/about"
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "About page content")
+        self.assertNotContains(response, "version-one homepage")
+
+    def test_unknown_published_page_slug_returns_404(self):
+        self._create_version(1, "version-one")
+        self._set_current(1)
+
+        response = self.client.get(
+            f"/sites/{self.site.id}/published/missing"
+        )
+
+        self.assertEqual(response.status_code, 404)
 
     def test_changing_current_pointer_changes_rendered_version(self):
         self._create_version(1, "version-one")

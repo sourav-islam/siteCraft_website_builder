@@ -44,7 +44,7 @@ class PublishedSiteRenderService:
             error_message,
         )
 
-    def get_context(self, site):
+    def get_context(self, site, page_slug="home"):
         published_root = self._published_root(site)
         current = self._read_json(
             published_root / "current.json",
@@ -78,12 +78,12 @@ class PublishedSiteRenderService:
         )
 
         pages = files.get("pages")
-        if not isinstance(pages, dict) or not pages.get("home"):
-            raise Http404("The published homepage is unavailable.")
-        homepage = self._load_file_json(
+        if not isinstance(pages, dict) or not pages.get(page_slug):
+            raise Http404("The requested published page is unavailable.")
+        page = self._load_file_json(
             version_root,
-            pages["home"],
-            "The published homepage is unavailable.",
+            pages[page_slug],
+            "The requested published page is unavailable.",
         )
 
         global_css = ""
@@ -98,14 +98,18 @@ class PublishedSiteRenderService:
             "version": version,
             "manifest": manifest,
             "header": header,
-            "homepage": homepage,
+            "page": page,
+            "homepage": page,
             "footer": footer,
             "global_css": global_css,
         }
 
     def render_homepage(self, request, site):
+        return self.render_page(request, site, "home")
+
+    def render_page(self, request, site, page_slug):
         return render(
             request,
             "published/site.html",
-            self.get_context(site),
+            self.get_context(site, page_slug=page_slug),
         )

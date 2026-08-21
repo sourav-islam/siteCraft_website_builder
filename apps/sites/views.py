@@ -331,3 +331,16 @@ class PublishedSiteAPIView(generics.GenericAPIView):
     def get(self, request, pk):
         site = self.get_object()
         return PublishedSiteRenderService().render_homepage(request, site)
+
+
+class PublishedSitePageAPIView(generics.GenericAPIView):
+    permission_classes = [permissions.AllowAny]
+    queryset = Site.objects.all()
+
+    def get(self, request, pk, page_slug):
+        site = self.get_object()
+        return PublishedSiteRenderService().render_page(
+            request,
+            site,
+            page_slug,
+        )
