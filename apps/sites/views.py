@@ -57,6 +57,7 @@ class SiteListCreateAPIView(generics.ListCreateAPIView):
         site = SiteService.create_site(
             owner=self.request.user,
             actor=self.request.user,
+            created_by=self.request.user,
             **serializer.validated_data,
         )
         serializer.instance = site

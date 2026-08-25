@@ -40,8 +40,8 @@ class SiteListCreateAPITests(SiteApiBase):
         SiteService.create_site(owner=self.other, actor=self.other, name="Yours")
         response = self.client.get(self._list_url())
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data["results"]), 1)
-        self.assertEqual(response.data["results"][0]["name"], "Mine")
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]["name"], "Mine")
 
     def test_list_unauthenticated_401(self):
         self.client.logout()
@@ -52,9 +52,9 @@ class SiteListCreateAPITests(SiteApiBase):
         SiteService.create_site(owner=self.owner, actor=self.owner, name="Banana")
         SiteService.create_site(owner=self.owner, actor=self.owner, name="Apple")
         response = self.client.get(self._list_url(), {"search": "Apple"})
-        self.assertEqual(len(response.data["results"]), 1)
+        self.assertEqual(len(response.data), 1)
         ordered = self.client.get(self._list_url(), {"ordering": "name"})
-        names = [site["name"] for site in ordered.data["results"]]
+        names = [site["name"] for site in ordered.data]
         self.assertEqual(names, sorted(names))
 
 
