@@ -1,7 +1,7 @@
 from unittest import mock
 
 from django.contrib.auth import get_user_model
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ImproperlyConfigured, ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from rest_framework.exceptions import APIException
@@ -14,8 +14,20 @@ from apps.common.validators import (
     validate_file_size,
     validate_html_file_extension,
 )
+from config.settings import get_media_root
 
 User = get_user_model()
+
+
+class AppEnvironmentMediaRootTests(TestCase):
+    def test_media_root_is_separated_by_environment(self):
+        self.assertEqual(get_media_root("canary").name, "canary")
+        self.assertEqual(get_media_root("beta").name, "beta")
+        self.assertEqual(get_media_root("production").name, "production")
+
+    def test_invalid_environment_raises_configuration_error(self):
+        with self.assertRaises(ImproperlyConfigured):
+            get_media_root("invalid")
 
 
 class CustomExceptionTests(TestCase):

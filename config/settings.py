@@ -14,11 +14,26 @@ from datetime import timedelta
 import os
 from pathlib import Path
 
+from django.core.exceptions import ImproperlyConfigured
 from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 load_dotenv(BASE_DIR / ".env")
+
+ALLOWED_APP_ENVIRONMENTS = ("canary", "beta", "production")
+
+
+def get_media_root(app_env):
+    if app_env not in ALLOWED_APP_ENVIRONMENTS:
+        raise ImproperlyConfigured(
+            "APP_ENV must be one of: canary, beta, production."
+        )
+    return BASE_DIR / "media" / app_env
+
+
+APP_ENV = os.getenv("APP_ENV", "canary").strip().lower()
+MEDIA_ROOT = get_media_root(APP_ENV)
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
@@ -157,7 +172,6 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 MEDIA_URL = "/media/"
-MEDIA_ROOT = BASE_DIR / "media"
 
 # Redis Configuration for Locking
 REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
