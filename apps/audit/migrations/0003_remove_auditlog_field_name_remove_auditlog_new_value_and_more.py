@@ -4,27 +4,30 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('audit', '0002_auditlog_type'),
+        ("audit", "0002_auditlog_type"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='auditlog',
-            name='field_name',
+            model_name="auditlog",
+            name="field_name",
         ),
         migrations.RemoveField(
-            model_name='auditlog',
-            name='new_value',
+            model_name="auditlog",
+            name="new_value",
         ),
         migrations.RemoveField(
-            model_name='auditlog',
-            name='old_value',
+            model_name="auditlog",
+            name="old_value",
         ),
         migrations.AddField(
-            model_name='auditlog',
-            name='changes',
-            field=models.JSONField(blank=True, default=dict, help_text="Field-level diff payload for update actions, keyed by field name. Example: {'title': {'old': 'aboutpage', 'new': 'a'}}"),
+            model_name="auditlog",
+            name="changes",
+            field=models.JSONField(
+                blank=True,
+                default=dict,
+                help_text="Field-level diff payload for update actions, keyed by field name. Example: {'title': {'old': 'aboutpage', 'new': 'a'}}",
+            ),
         ),
     ]

@@ -1,8 +1,8 @@
 import asyncio
-import statistics
-import time
 from math import ceil
 from pathlib import Path
+import statistics
+import time
 
 from django.core.files.storage import default_storage
 from django.core.management.base import BaseCommand, CommandError
@@ -23,7 +23,7 @@ async def read_document(path, semaphore):
 async def read_documents(paths, concurrency):
     semaphore = asyncio.Semaphore(concurrency)
     return await asyncio.gather(
-        *(read_document(path, semaphore) for path in paths)
+        *(read_document(path, semaphore) for path in paths),
     )
 
 
@@ -78,7 +78,7 @@ class Command(BaseCommand):
 
         paths, page_count = self._load_paths(site)
         self.stdout.write(
-            f"Loaded {len(paths)} files ({page_count} pages + header + footer)."
+            f"Loaded {len(paths)} files ({page_count} pages + header + footer).",
         )
 
         result = asyncio.run(
@@ -87,7 +87,7 @@ class Command(BaseCommand):
                 concurrency=concurrency,
                 runs=runs,
                 warmups=warmups,
-            )
+            ),
         )
         self._write_results(
             site_id=site_id,
@@ -113,7 +113,7 @@ class Command(BaseCommand):
             site.pages.filter(
                 is_enabled=True,
                 html_file__isnull=False,
-            ).exclude(html_file="")
+            ).exclude(html_file=""),
         )
         if not pages:
             raise CommandError("Site has no enabled pages with HTML files.")
@@ -130,7 +130,7 @@ class Command(BaseCommand):
             return Path(default_storage.path(name))
         except (AttributeError, NotImplementedError, ValueError) as exc:
             raise CommandError(
-                "benchmark_async requires local filesystem storage."
+                "benchmark_async requires local filesystem storage.",
             ) from exc
 
     async def _benchmark(self, *, paths, concurrency, runs, warmups):
@@ -139,7 +139,7 @@ class Command(BaseCommand):
                 await read_documents(paths, concurrency)
             except Exception as exc:
                 raise CommandError(
-                    f"Warm-up {warmup_number} failed: {exc}"
+                    f"Warm-up {warmup_number} failed: {exc}",
                 ) from exc
 
         samples = []
@@ -228,16 +228,17 @@ class Command(BaseCommand):
         self.stdout.write("")
         self.stdout.write("--- CPU ---")
         self.stdout.write(
-            f"Average parent CPU: {statistics.mean(cpu_samples):.6f}s"
+            f"Average parent CPU: {statistics.mean(cpu_samples):.6f}s",
         )
         self.stdout.write("")
         self.stdout.write("--- Memory ---")
         if memory_samples:
             self.stdout.write(
-                f"Maximum RSS observed: {max(memory_samples):.2f} MB"
+                f"Maximum RSS observed: {max(memory_samples):.2f} MB",
             )
         else:
             self.stdout.write("Memory: unavailable")
+
 
 # python3 manage.py benchmark_async \
 #   --site-id 1 \

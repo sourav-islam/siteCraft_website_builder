@@ -21,7 +21,6 @@ class SiteAdmin(admin.ModelAdmin):
     search_fields = (
         "name",
         "description",
-
     )
 
     readonly_fields = (

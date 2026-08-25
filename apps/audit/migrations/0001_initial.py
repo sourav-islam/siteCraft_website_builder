@@ -6,33 +6,77 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
     dependencies = [
-        ('contenttypes', '0002_remove_content_type_name'),
+        ("contenttypes", "0002_remove_content_type_name"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='AuditLog',
+            name="AuditLog",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('object_id', models.PositiveIntegerField()),
-                ('action', models.CharField(choices=[('created', 'Created'), ('updated', 'Updated'), ('deleted', 'Deleted'), ('published', 'Published'), ('locked', 'Locked'), ('unlocked', 'Unlocked')], max_length=20)),
-                ('field_name', models.CharField(blank=True, default='', help_text="Populated only for 'updated' rows — the field that changed.", max_length=100)),
-                ('old_value', models.TextField(blank=True, default='')),
-                ('new_value', models.TextField(blank=True, default='')),
-                ('metadata', models.JSONField(blank=True, default=dict, help_text="Free-form context for action types that aren't a simple field diff.")),
-                ('actor', models.ForeignKey(blank=True, help_text='User who performed the action. Null if the system performed it.', null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='audit_logs', to=settings.AUTH_USER_MODEL)),
-                ('content_type', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='contenttypes.contenttype')),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                ("object_id", models.PositiveIntegerField()),
+                (
+                    "action",
+                    models.CharField(
+                        choices=[
+                            ("created", "Created"),
+                            ("updated", "Updated"),
+                            ("deleted", "Deleted"),
+                            ("published", "Published"),
+                            ("locked", "Locked"),
+                            ("unlocked", "Unlocked"),
+                        ],
+                        max_length=20,
+                    ),
+                ),
+                (
+                    "field_name",
+                    models.CharField(
+                        blank=True,
+                        default="",
+                        help_text="Populated only for 'updated' rows — the field that changed.",
+                        max_length=100,
+                    ),
+                ),
+                ("old_value", models.TextField(blank=True, default="")),
+                ("new_value", models.TextField(blank=True, default="")),
+                (
+                    "metadata",
+                    models.JSONField(
+                        blank=True,
+                        default=dict,
+                        help_text="Free-form context for action types that aren't a simple field diff.",
+                    ),
+                ),
+                (
+                    "actor",
+                    models.ForeignKey(
+                        blank=True,
+                        help_text="User who performed the action. Null if the system performed it.",
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="audit_logs",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
+                (
+                    "content_type",
+                    models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="contenttypes.contenttype"),
+                ),
             ],
             options={
-                'ordering': ['-created_at'],
-                'indexes': [models.Index(fields=['content_type', 'object_id', '-created_at'], name='audit_audit_content_895b94_idx')],
+                "ordering": ["-created_at"],
+                "indexes": [
+                    models.Index(
+                        fields=["content_type", "object_id", "-created_at"], name="audit_audit_content_895b94_idx"
+                    )
+                ],
             },
         ),
     ]

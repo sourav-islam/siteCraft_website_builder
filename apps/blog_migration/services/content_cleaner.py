@@ -1,10 +1,9 @@
 from bs4 import BeautifulSoup
-from typing import List
 
 
 class ContentCleanerService:
     @classmethod
-    def clean_content(cls, html: str, images: List[dict]) -> str:
+    def clean_content(cls, html: str, images: list[dict]) -> str:
         soup = BeautifulSoup(html, "lxml")
         cls._remove_google_doc_styles(soup)
         cls._replace_image_urls(soup, images)
@@ -23,7 +22,7 @@ class ContentCleanerService:
             span.unwrap()
 
     @staticmethod
-    def _replace_image_urls(soup: BeautifulSoup, images: List[dict]):
+    def _replace_image_urls(soup: BeautifulSoup, images: list[dict]):
         img_tags = soup.find_all("img")
         for idx, img in enumerate(img_tags):
             if idx < len(images):

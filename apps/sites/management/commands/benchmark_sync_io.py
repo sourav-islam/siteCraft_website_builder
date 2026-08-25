@@ -1,7 +1,7 @@
-import statistics
-import time
 from math import ceil
 from pathlib import Path
+import statistics
+import time
 
 from django.core.files.storage import default_storage
 from django.core.management.base import BaseCommand, CommandError
@@ -34,13 +34,12 @@ class Command(BaseCommand):
             site = Site.objects.get(pk=options["site_id"])
         except Site.DoesNotExist as exc:
             raise CommandError(
-                f"Site {options['site_id']} does not exist."
+                f"Site {options['site_id']} does not exist.",
             ) from exc
 
         paths, page_count = self._load_paths(site)
         self.stdout.write(
-            f"Loaded {len(paths)} files "
-            f"({page_count} pages + header + footer)."
+            f"Loaded {len(paths)} files ({page_count} pages + header + footer).",
         )
 
         for warmup_number in range(1, warmups + 1):
@@ -48,7 +47,7 @@ class Command(BaseCommand):
                 self._read_paths(paths)
             except Exception as exc:
                 raise CommandError(
-                    f"Warm-up {warmup_number} failed: {exc}"
+                    f"Warm-up {warmup_number} failed: {exc}",
                 ) from exc
 
         samples = []
@@ -108,7 +107,7 @@ class Command(BaseCommand):
             site.pages.filter(
                 is_enabled=True,
                 html_file__isnull=False,
-            ).exclude(html_file="")
+            ).exclude(html_file=""),
         )
         if not pages:
             raise CommandError("Site has no enabled pages with HTML files.")
@@ -124,7 +123,7 @@ class Command(BaseCommand):
             return Path(default_storage.path(name))
         except (AttributeError, NotImplementedError, ValueError) as exc:
             raise CommandError(
-                "benchmark_sync_io requires local filesystem storage."
+                "benchmark_sync_io requires local filesystem storage.",
             ) from exc
 
     def _read_paths(self, paths):
@@ -172,14 +171,15 @@ class Command(BaseCommand):
         self.stdout.write(f"P95: {ordered_samples[p95_index]:.6f}s")
         self.stdout.write(f"Total benchmark time: {total_wall_time:.6f}s")
         self.stdout.write(
-            f"Average parent CPU: {statistics.mean(cpu_samples):.6f}s"
+            f"Average parent CPU: {statistics.mean(cpu_samples):.6f}s",
         )
         if memory_samples:
             self.stdout.write(
-                f"Maximum RSS observed: {max(memory_samples):.2f} MB"
+                f"Maximum RSS observed: {max(memory_samples):.2f} MB",
             )
         else:
             self.stdout.write("Memory: unavailable")
+
 
 # python3 manage.py benchmark_sync_io \
 #   --site-id 1 \

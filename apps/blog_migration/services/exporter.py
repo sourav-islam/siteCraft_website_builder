@@ -39,7 +39,7 @@ class ExporterService:
 
         if response.status_code != 200:
             raise ExportError(
-                f"Unable to export document (tab={tab_id}). Status: {response.status_code}"
+                f"Unable to export document (tab={tab_id}). Status: {response.status_code}",
             )
 
         MIGRATION_DIR.mkdir(parents=True, exist_ok=True)

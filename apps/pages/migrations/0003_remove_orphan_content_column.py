@@ -11,7 +11,6 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("pages", "0002_page_created_by_page_html_file_page_is_enabled_and_more"),
     ]
@@ -19,9 +18,6 @@ class Migration(migrations.Migration):
     operations = [
         migrations.RunSQL(
             sql="ALTER TABLE pages_page DROP COLUMN IF EXISTS content;",
-            reverse_sql=(
-                "ALTER TABLE pages_page ADD COLUMN content jsonb "
-                "DEFAULT '{}'::jsonb NOT NULL;"
-            ),
+            reverse_sql=("ALTER TABLE pages_page ADD COLUMN content jsonb DEFAULT '{}'::jsonb NOT NULL;"),
         ),
     ]

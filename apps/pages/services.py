@@ -1,5 +1,7 @@
 from django.utils.text import slugify
+
 from apps.audit.services import AuditService, diff_fields
+
 from .models import Page
 
 

@@ -2,10 +2,10 @@ from django.core.files.base import ContentFile
 from django.core.management.base import BaseCommand, CommandError
 from django.utils.text import slugify
 
-from apps.blog_migration.services.exporter import ExporterService
-from apps.blog_migration.services.parser import ParserService
-from apps.blog_migration.services.image_downloader import ImageDownloaderService
 from apps.blog_migration.services.content_cleaner import ContentCleanerService
+from apps.blog_migration.services.exporter import ExporterService
+from apps.blog_migration.services.image_downloader import ImageDownloaderService
+from apps.blog_migration.services.parser import ParserService
 from apps.blog_migration.services.reporter import Reporter
 from apps.pages.services import PageService
 
@@ -15,10 +15,10 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument("url", type=str, help="Google Docs URL")
-        parser.add_argument("--site-id", type=int, required=True,
-                             help="Site ID to associate with the migrated pages")
-        parser.add_argument("--tabs", type=str, required=True,
-                             help="Comma-separated Google Docs tab IDs, e.g. t.0,t.1,t.2")
+        parser.add_argument("--site-id", type=int, required=True, help="Site ID to associate with the migrated pages")
+        parser.add_argument(
+            "--tabs", type=str, required=True, help="Comma-separated Google Docs tab IDs, e.g. t.0,t.1,t.2"
+        )
 
     def handle(self, *args, **options):
         url = options["url"]
@@ -49,7 +49,8 @@ class Command(BaseCommand):
 
         Reporter.info(f"[{tab_id}] Downloading images...")
         images = ImageDownloaderService.download_images(
-            parsed["images"], folder=slugify(parsed["title"]) or tab_id
+            parsed["images"],
+            folder=slugify(parsed["title"]) or tab_id,
         )
 
         Reporter.info(f"[{tab_id}] Cleaning content...")

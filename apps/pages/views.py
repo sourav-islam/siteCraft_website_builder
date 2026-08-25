@@ -1,6 +1,7 @@
 from django.shortcuts import get_object_or_404
 from rest_framework import filters, generics, permissions, status
 from rest_framework.response import Response
+
 from apps.audit.services import AuditService
 from apps.common.permissions import CanDelete, HasUpdate, IsOwner
 from apps.common.services import LockService
@@ -55,13 +56,9 @@ class PageListCreateAPIView(generics.ListCreateAPIView):
         )
 
     def get_queryset(self):
-        return (
-            Page.objects
-            .select_related("site")
-            .filter(
-                site_id=self.kwargs["site_id"],
-                site__owner=self.request.user,
-            )
+        return Page.objects.select_related("site").filter(
+            site_id=self.kwargs["site_id"],
+            site__owner=self.request.user,
         )
 
     def get_serializer_context(self):
@@ -93,21 +90,17 @@ class PageRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
         return [permissions.IsAuthenticated()]
 
     def get_queryset(self):
-        return (
-            Page.objects
-            .select_related("site")
-            .filter(
-                site_id=self.kwargs["site_id"],
-                site__owner=self.request.user,
-            )
+        return Page.objects.select_related("site").filter(
+            site_id=self.kwargs["site_id"],
+            site__owner=self.request.user,
         )
 
     def update(self, request, *args, **kwargs):
         page = self.get_object()
-        lock_status = LockService.get_lock_status('page', page.id)
-        if lock_status['locked']:
-            locker = lock_status.get('locker')
-            locker_name = locker['username'] if locker else 'someone'
+        lock_status = LockService.get_lock_status("page", page.id)
+        if lock_status["locked"]:
+            locker = lock_status.get("locker")
+            locker_name = locker["username"] if locker else "someone"
             return Response(
                 {
                     "detail": f"This page is currently being edited by {locker_name}.",
@@ -118,18 +111,18 @@ class PageRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
                         "locker": locker,
                         "ttl_remaining": lock_status.get("ttl_remaining"),
                         "lock_key": lock_status.get("lock_key"),
-                    }
+                    },
                 },
-                status=status.HTTP_409_CONFLICT
+                status=status.HTTP_409_CONFLICT,
             )
         return super().update(request, *args, **kwargs)
 
     def destroy(self, request, *args, **kwargs):
         page = self.get_object()
-        lock_status = LockService.get_lock_status('page', page.id)
-        if lock_status['locked']:
-            locker = lock_status.get('locker')
-            locker_name = locker['username'] if locker else 'someone'
+        lock_status = LockService.get_lock_status("page", page.id)
+        if lock_status["locked"]:
+            locker = lock_status.get("locker")
+            locker_name = locker["username"] if locker else "someone"
             return Response(
                 {
                     "detail": f"This page is currently being edited by {locker_name}.",
@@ -140,9 +133,9 @@ class PageRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
                         "locker": locker,
                         "ttl_remaining": lock_status.get("ttl_remaining"),
                         "lock_key": lock_status.get("lock_key"),
-                    }
+                    },
                 },
-                status=status.HTTP_409_CONFLICT
+                status=status.HTTP_409_CONFLICT,
             )
         AuditService.log_delete(
             page,
@@ -164,19 +157,15 @@ class PageLockAPIView(generics.GenericAPIView):
     queryset = Page.objects.all()
 
     def get_queryset(self):
-        return (
-            Page.objects
-            .select_related("site")
-            .filter(
-                site_id=self.kwargs["site_id"],
-                site__owner=self.request.user,
-            )
+        return Page.objects.select_related("site").filter(
+            site_id=self.kwargs["site_id"],
+            site__owner=self.request.user,
         )
 
     def get(self, request, site_id, pk):
         """GET lock status for a page — public read check."""
         page = self.get_object()
-        lock_status = LockService.get_lock_status('page', page.id)
+        lock_status = LockService.get_lock_status("page", page.id)
 
         response_data = {
             "detail": "Page is available for editing." if not lock_status["locked"] else "Page is currently locked.",
@@ -189,14 +178,14 @@ class PageLockAPIView(generics.GenericAPIView):
                 "locker": lock_status.get("locker"),
                 "ttl_seconds": lock_status.get("ttl_seconds"),
                 "ttl_remaining": lock_status.get("ttl_remaining"),
-            }
+            },
         }
         return Response(response_data, status=status.HTTP_200_OK)
 
     def post(self, request, site_id, pk):
         """POST — acquire a lock for a page."""
         page = self.get_object()
-        lock_result = LockService.acquire_lock('page', page.id, request.user.id)
+        lock_result = LockService.acquire_lock("page", page.id, request.user.id)
 
         base_response = {
             "page": _page_info(page),
@@ -209,23 +198,22 @@ class PageLockAPIView(generics.GenericAPIView):
                 "ttl_seconds": lock_result.get("ttl_seconds"),
                 "ttl_remaining": lock_result.get("ttl_remaining"),
                 "acquired_at": lock_result.get("acquired_at"),
-            }
+            },
         }
 
-        if lock_result['success']:
+        if lock_result["success"]:
             base_response["detail"] = "Lock acquired successfully."
             return Response(base_response, status=status.HTTP_200_OK)
-        else:
-            locker = lock_result.get('locker')
-            locker_name = locker['username'] if locker else 'someone'
-            base_response["detail"] = f"This page is currently being edited by {locker_name}."
-            base_response["code"] = "page_locked"
-            return Response(base_response, status=status.HTTP_409_CONFLICT)
+        locker = lock_result.get("locker")
+        locker_name = locker["username"] if locker else "someone"
+        base_response["detail"] = f"This page is currently being edited by {locker_name}."
+        base_response["code"] = "page_locked"
+        return Response(base_response, status=status.HTTP_409_CONFLICT)
 
     def delete(self, request, site_id, pk):
         """DELETE — release a lock for a page. Returns JSON body (not empty 204)."""
         page = self.get_object()
-        release_result = LockService.release_lock('page', page.id, request.user.id)
+        release_result = LockService.release_lock("page", page.id, request.user.id)
 
         base_response = {
             "page": _page_info(page),
@@ -245,12 +233,11 @@ class PageLockAPIView(generics.GenericAPIView):
         if release_result.get("released_at"):
             base_response["released_at"] = release_result["released_at"]
 
-        if release_result['success']:
+        if release_result["success"]:
             return Response(base_response, status=status.HTTP_200_OK)
-        else:
-            if release_result.get("reason") == "no_lock":
-                return Response(base_response, status=status.HTTP_404_NOT_FOUND)
-            return Response(base_response, status=status.HTTP_403_FORBIDDEN)
+        if release_result.get("reason") == "no_lock":
+            return Response(base_response, status=status.HTTP_404_NOT_FOUND)
+        return Response(base_response, status=status.HTTP_403_FORBIDDEN)
 
 
 class PageHeartbeatAPIView(generics.GenericAPIView):
@@ -258,13 +245,9 @@ class PageHeartbeatAPIView(generics.GenericAPIView):
     queryset = Page.objects.all()
 
     def get_queryset(self):
-        return (
-            Page.objects
-            .select_related("site")
-            .filter(
-                site_id=self.kwargs["site_id"],
-                site__owner=self.request.user,
-            )
+        return Page.objects.select_related("site").filter(
+            site_id=self.kwargs["site_id"],
+            site__owner=self.request.user,
         )
 
     def post(self, request, site_id, pk):
@@ -292,7 +275,7 @@ class PageHeartbeatAPIView(generics.GenericAPIView):
             "reason": hb_result.get("reason"),
         }
 
-        if hb_result['success']:
+        if hb_result["success"]:
             return Response(base_response, status=status.HTTP_200_OK)
 
         if hb_result.get("reason") == "no_lock":

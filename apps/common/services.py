@@ -1,7 +1,7 @@
-import redis
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.utils import timezone
+import redis
 
 User = get_user_model()
 
@@ -10,7 +10,7 @@ redis_client = redis.Redis(
     host=settings.REDIS_HOST,
     port=settings.REDIS_PORT,
     db=settings.REDIS_DB,
-    decode_responses=True  # Automatically decode bytes to strings
+    decode_responses=True,  # Automatically decode bytes to strings
 )
 
 
@@ -37,13 +37,13 @@ class LockService:
     def acquire_lock(cls, resource_type, resource_id, user_id, ttl=None):
         """
         Try to acquire a lock for a resource.
-        
+
         Args:
             resource_type: Type of resource (e.g., 'site', 'page')
             resource_id: ID of the resource
             user_id: ID of the user trying to acquire the lock
             ttl: Time to live in seconds (defaults to settings.LOCK_TTL)
-        
+
         Returns:
             dict: Status with 'success' flag and 'locker' info if already locked
         """
@@ -57,7 +57,7 @@ class LockService:
             name=lock_key,
             value=str(user_id),
             ex=ttl,  # Expire after ttl seconds
-            nx=True  # Only set if key doesn't exist
+            nx=True,  # Only set if key doesn't exist
         )
 
         if lock_acquired:
@@ -102,12 +102,12 @@ class LockService:
     def release_lock(cls, resource_type, resource_id, user_id):
         """
         Release a lock for a resource (only by the user who holds it).
-        
+
         Args:
             resource_type: Type of resource (e.g., 'site', 'page')
             resource_id: ID of the resource
             user_id: ID of the user trying to release the lock
-        
+
         Returns:
             dict: Rich result with success flag, reason, lock info, and locker
         """
@@ -169,11 +169,11 @@ class LockService:
     def get_lock_status(cls, resource_type, resource_id):
         """
         Get the current status of a lock.
-        
+
         Args:
             resource_type: Type of resource (e.g., 'site', 'page')
             resource_id: ID of the resource
-        
+
         Returns:
             dict: Rich lock status info
         """
@@ -207,7 +207,6 @@ class LockService:
             "ttl_remaining": ttl_remaining,
             "ttl_seconds": settings.LOCK_TTL,
         }
-    
 
     @classmethod
     def heartbeat(cls, resource_type, resource_id, user_id):

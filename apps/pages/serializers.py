@@ -1,7 +1,5 @@
 from rest_framework import serializers
 
-from apps.sites.models import Site
-
 from .models import Page
 
 
@@ -38,7 +36,6 @@ class PageSerializer(serializers.ModelSerializer):
             "updated_by",
         )
 
- 
     def validate(self, attrs):
         """
         Only one homepage is allowed per site.
@@ -53,7 +50,6 @@ class PageSerializer(serializers.ModelSerializer):
         )
 
         if site and is_homepage:
-
             queryset = Page.objects.filter(
                 site=site,
                 is_homepage=True,
@@ -61,15 +57,14 @@ class PageSerializer(serializers.ModelSerializer):
 
             if self.instance:
                 queryset = queryset.exclude(
-                    pk=self.instance.pk
+                    pk=self.instance.pk,
                 )
 
             if queryset.exists():
                 raise serializers.ValidationError(
                     {
-                        "is_homepage":
-                        "This site already has a homepage."
-                    }
+                        "is_homepage": "This site already has a homepage.",
+                    },
                 )
 
         return attrs

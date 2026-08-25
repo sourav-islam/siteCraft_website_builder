@@ -3,10 +3,9 @@ from django.urls import path
 from .views import (
     PageHeartbeatAPIView,
     PageListCreateAPIView,
-    PageRetrieveUpdateDestroyAPIView,
     PageLockAPIView,
+    PageRetrieveUpdateDestroyAPIView,
 )
-
 
 urlpatterns = [
     path(

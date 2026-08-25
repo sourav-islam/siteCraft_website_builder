@@ -10,6 +10,6 @@ class HealthCheckAPIView(APIView):
         return Response(
             {
                 "status": "ok",
-                "message": "Website Builder API is running."
-            }
+                "message": "Website Builder API is running.",
+            },
         )

@@ -13,5 +13,6 @@ class ValidationError(BlogMigrationError):
 class ImageDownloadError(BlogMigrationError):
     """Raised when an image cannot be downloaded."""
 
+
 class InvalidGoogleDocURLError(BlogMigrationError):
-    """Invalid Google Docs URL."""    
+    """Invalid Google Docs URL."""

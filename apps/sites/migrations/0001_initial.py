@@ -7,7 +7,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
     dependencies = [
@@ -16,25 +15,81 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
-            name='Site',
+            name="Site",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('name', models.CharField(max_length=150)),
-                ('description', models.TextField(blank=True)),
-                ('logo', models.ImageField(blank=True, null=True, upload_to='sites/logos/')),
-                ('favicon', models.ImageField(blank=True, null=True, upload_to='sites/favicons/')),
-                ('header', models.FileField(blank=True, help_text='Header HTML file for the published site.', null=True, upload_to='sites/header/', validators=[apps.common.validators.validate_file_size, apps.common.validators.validate_html_file_extension])),
-                ('footer', models.FileField(blank=True, help_text='Footer HTML file for the published site.', null=True, upload_to='sites/footer/', validators=[apps.common.validators.validate_file_size, apps.common.validators.validate_html_file_extension])),
-                ('status', models.CharField(choices=[('draft', 'Draft'), ('published', 'Published'), ('archived', 'Archived')], default='draft', max_length=20)),
-                ('is_public', models.BooleanField(default=False)),
-                ('created_by', models.ForeignKey(blank=True, help_text='User who initially created the site.', null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='sites_created', to=settings.AUTH_USER_MODEL)),
-                ('owner', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='sites', to=settings.AUTH_USER_MODEL)),
-                ('updated_by', models.ForeignKey(blank=True, help_text='User who last modified the site.', null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='sites_updated', to=settings.AUTH_USER_MODEL)),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                ("name", models.CharField(max_length=150)),
+                ("description", models.TextField(blank=True)),
+                ("logo", models.ImageField(blank=True, null=True, upload_to="sites/logos/")),
+                ("favicon", models.ImageField(blank=True, null=True, upload_to="sites/favicons/")),
+                (
+                    "header",
+                    models.FileField(
+                        blank=True,
+                        help_text="Header HTML file for the published site.",
+                        null=True,
+                        upload_to="sites/header/",
+                        validators=[
+                            apps.common.validators.validate_file_size,
+                            apps.common.validators.validate_html_file_extension,
+                        ],
+                    ),
+                ),
+                (
+                    "footer",
+                    models.FileField(
+                        blank=True,
+                        help_text="Footer HTML file for the published site.",
+                        null=True,
+                        upload_to="sites/footer/",
+                        validators=[
+                            apps.common.validators.validate_file_size,
+                            apps.common.validators.validate_html_file_extension,
+                        ],
+                    ),
+                ),
+                (
+                    "status",
+                    models.CharField(
+                        choices=[("draft", "Draft"), ("published", "Published"), ("archived", "Archived")],
+                        default="draft",
+                        max_length=20,
+                    ),
+                ),
+                ("is_public", models.BooleanField(default=False)),
+                (
+                    "created_by",
+                    models.ForeignKey(
+                        blank=True,
+                        help_text="User who initially created the site.",
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="sites_created",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
+                (
+                    "owner",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE, related_name="sites", to=settings.AUTH_USER_MODEL
+                    ),
+                ),
+                (
+                    "updated_by",
+                    models.ForeignKey(
+                        blank=True,
+                        help_text="User who last modified the site.",
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="sites_updated",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
             options={
-                'ordering': ['-created_at'],
+                "ordering": ["-created_at"],
             },
         ),
     ]

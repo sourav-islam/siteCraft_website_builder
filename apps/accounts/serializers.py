@@ -32,7 +32,7 @@ class RegisterSerializer(serializers.Serializer):
     def validate_username(self, value):
         if User.objects.filter(username=value).exists():
             raise serializers.ValidationError(
-                "A user with this username already exists."
+                "A user with this username already exists.",
             )
 
         return value
@@ -42,7 +42,7 @@ class RegisterSerializer(serializers.Serializer):
 
         if User.objects.filter(email=email).exists():
             raise serializers.ValidationError(
-                "A user with this email already exists."
+                "A user with this email already exists.",
             )
 
         return email
@@ -51,9 +51,8 @@ class RegisterSerializer(serializers.Serializer):
         if attrs["password"] != attrs["password_confirm"]:
             raise serializers.ValidationError(
                 {
-                    "password_confirm":
-                    "Passwords do not match."
-                }
+                    "password_confirm": "Passwords do not match.",
+                },
             )
 
         validate_password(attrs["password"])
@@ -99,7 +98,7 @@ class UserProfileUpdateSerializer(serializers.ModelSerializer):
 
         if queryset.filter(username=value).exists():
             raise serializers.ValidationError(
-                "A user with this username already exists."
+                "A user with this username already exists.",
             )
 
         return value
@@ -110,7 +109,7 @@ class UserProfileUpdateSerializer(serializers.ModelSerializer):
 
         if queryset.filter(email=email).exists():
             raise serializers.ValidationError(
-                "A user with this email already exists."
+                "A user with this email already exists.",
             )
 
         return email

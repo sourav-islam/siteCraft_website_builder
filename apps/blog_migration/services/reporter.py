@@ -1,5 +1,4 @@
 class Reporter:
-
     @staticmethod
     def info(message):
         print(f"[INFO] {message}")

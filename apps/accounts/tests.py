@@ -38,7 +38,7 @@ class AccountsAPITests(TestCase):
         self.assertIn("password_confirm", response.data)
 
     def test_user_login_success(self):
-        user = User.objects.create_user(
+        _user = User.objects.create_user(
             username="loginuser",
             email="login@example.com",
             password="SecurePass123!",

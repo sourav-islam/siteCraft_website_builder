@@ -32,7 +32,6 @@ class Page(TimeStampedModel):
 
     slug = models.SlugField(max_length=160)
 
-
     html_file = models.FileField(
         upload_to="pages/html/",
         blank=True,
@@ -68,7 +67,6 @@ class Page(TimeStampedModel):
         default=Status.DRAFT,
     )
 
-
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
@@ -94,7 +92,7 @@ class Page(TimeStampedModel):
             models.UniqueConstraint(
                 fields=["site", "slug"],
                 name="unique_page_slug_per_site",
-            )
+            ),
         ]
 
     def save(self, *args, **kwargs):

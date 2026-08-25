@@ -3,12 +3,11 @@ from django.urls import include, path
 from .views import (
     SiteHeartbeatAPIView,
     SiteListCreateAPIView,
-    SiteRetrieveUpdateDestroyAPIView,
     SiteLockAPIView,
     SitePublishAPIView,
+    SiteRetrieveUpdateDestroyAPIView,
     SiteRollbackAPIView,
 )
-
 
 urlpatterns = [
     path(

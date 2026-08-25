@@ -1,12 +1,12 @@
 import json
+from pathlib import Path
 import shutil
 import tempfile
-from pathlib import Path
 from unittest import mock
 
 from django.contrib.auth import get_user_model
-from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.files.storage import default_storage
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.http import Http404
 from django.test import TestCase, override_settings
 from django.test.client import RequestFactory
@@ -105,7 +105,7 @@ class PublishAndRollbackTests(TestCase):
 
         self.service.publish(self.site, actor=self.owner)
         manifest_path = default_storage.path(
-            f"{self.service._version_root(self.site, 1)}/manifest.json"
+            f"{self.service._version_root(self.site, 1)}/manifest.json",
         )
         with open(manifest_path, "w") as manifest_file:
             json.dump({"version": 1, "files": {"header": "missing.json"}}, manifest_file)
@@ -117,13 +117,15 @@ class PublishAndRollbackTests(TestCase):
         self.service.publish(self.site, actor=self.owner)
         current_path = f"{self.service._published_root(self.site)}/current.json"
 
-        with mock.patch.object(
-            self.service,
-            "_write_page",
-            side_effect=RuntimeError("generation failed"),
+        with (
+            mock.patch.object(
+                self.service,
+                "_write_page",
+                side_effect=RuntimeError("generation failed"),
+            ),
+            self.assertRaises(RuntimeError),
         ):
-            with self.assertRaises(RuntimeError):
-                self.service.publish(self.site, actor=self.owner)
+            self.service.publish(self.site, actor=self.owner)
 
         with open(default_storage.path(current_path)) as current_file:
             self.assertEqual(json.load(current_file), {"version": 1})
@@ -239,7 +241,7 @@ class PublishedSiteRenderingTests(TestCase):
         self._set_current(1)
 
         response = self.client.get(
-            f"/sites/{self.site.id}/published/"
+            f"/sites/{self.site.id}/published/",
         )
 
         self.assertEqual(response.status_code, 200)
@@ -263,7 +265,7 @@ class PublishedSiteRenderingTests(TestCase):
         self._set_current(1)
 
         response = self.client.get(
-            f"/sites/{self.site.id}/published/about"
+            f"/sites/{self.site.id}/published/about",
         )
 
         self.assertEqual(response.status_code, 200)
@@ -275,7 +277,7 @@ class PublishedSiteRenderingTests(TestCase):
         self._set_current(1)
 
         response = self.client.get(
-            f"/sites/{self.site.id}/published/missing"
+            f"/sites/{self.site.id}/published/missing",
         )
 
         self.assertEqual(response.status_code, 404)

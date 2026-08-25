@@ -1,8 +1,8 @@
 import os
 from unittest.mock import patch
 
-import requests
 from django.test import TestCase
+import requests
 
 from apps.blog_migration.services.exporter import ExporterService
 
@@ -17,18 +17,20 @@ class ExporterServiceTests(TestCase):
         mock_response.status_code = 200
         mock_response.text = "<html>ok</html>"
 
-        with patch.dict(
-            os.environ,
-            {"REQUESTS_CA_BUNDLE": "/home/w3e37/certs/company-ca.crt"},
-            clear=False,
-        ):
-            with patch(
+        with (
+            patch.dict(
+                os.environ,
+                {"REQUESTS_CA_BUNDLE": "/home/w3e37/certs/company-ca.crt"},
+                clear=False,
+            ),
+            patch(
                 "apps.blog_migration.services.exporter.certifi.where",
                 return_value="/tmp/certs.pem",
-            ):
-                ExporterService.export(
-                    "https://docs.google.com/document/d/abc123/edit"
-                )
+            ),
+        ):
+            ExporterService.export(
+                "https://docs.google.com/document/d/abc123/edit",
+            )
 
         self.assertEqual(mock_get.call_args.kwargs["verify"], "/tmp/certs.pem")
 
@@ -50,7 +52,7 @@ class ExporterServiceTests(TestCase):
             return_value="/tmp/certs.pem",
         ):
             ExporterService.export(
-                "https://docs.google.com/document/d/abc123/edit"
+                "https://docs.google.com/document/d/abc123/edit",
             )
 
         self.assertEqual(mock_get.call_count, 2)

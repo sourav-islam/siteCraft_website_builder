@@ -120,7 +120,8 @@ class AuditService:
     @staticmethod
     def _next_html_file_version(content_type, object_id):
         previous = (
-            AuditLog.objects.filter(
+            AuditLog.objects
+            .filter(
                 content_type=content_type,
                 object_id=object_id,
                 action=AuditLog.Action.UPDATED,
@@ -156,7 +157,8 @@ class AuditService:
             html_hash = compute_hash(getattr(instance, "html_file", None))
             metadata = {
                 "html_file_version": AuditService._next_html_file_version(
-                    content_type, instance.pk
+                    content_type,
+                    instance.pk,
                 ),
                 "html_file_hash": html_hash,
             }

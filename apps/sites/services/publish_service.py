@@ -25,11 +25,11 @@ class PublishService:
     def _validate_readiness(self, site, pages):
         if not site.header or not site.footer:
             raise PublishValidationError(
-                "Both header and footer HTML are required to publish."
+                "Both header and footer HTML are required to publish.",
             )
         if not pages:
             raise PublishValidationError(
-                "Site must have at least one enabled page with HTML to publish."
+                "Site must have at least one enabled page with HTML to publish.",
             )
 
     def _read(self, file_field):
@@ -130,7 +130,7 @@ class PublishService:
             if isinstance(value, str):
                 if value.startswith("/") or ".." in value.split("/"):
                     raise PublishValidationError(
-                        "Published manifest contains an unsafe file path."
+                        "Published manifest contains an unsafe file path.",
                     )
                 file_paths.append(posixpath.normpath(posixpath.join(version_root, value)))
             elif isinstance(value, dict):
@@ -150,14 +150,14 @@ class PublishService:
             ).first()
             if version is None:
                 raise PublishValidationError(
-                    "The requested published version does not exist."
+                    "The requested published version does not exist.",
                 )
 
             version_root = self._version_root(locked_site, version_number)
             manifest_path = posixpath.join(version_root, "manifest.json")
             if not default_storage.exists(manifest_path):
                 raise PublishValidationError(
-                    "The requested published version is incomplete."
+                    "The requested published version is incomplete.",
                 )
 
             try:
@@ -165,17 +165,17 @@ class PublishService:
                     manifest = json.load(manifest_file)
                 if manifest.get("version") != version_number:
                     raise PublishValidationError(
-                        "The requested published version has an invalid manifest."
+                        "The requested published version has an invalid manifest.",
                     )
                 required_files = self._manifest_file_paths(version_root, manifest)
             except (OSError, TypeError, ValueError, json.JSONDecodeError) as exc:
                 raise PublishValidationError(
-                    "The requested published version has an invalid manifest."
+                    "The requested published version has an invalid manifest.",
                 ) from exc
 
             if not self._required_files_exist(required_files):
                 raise PublishValidationError(
-                    "The requested published version is incomplete."
+                    "The requested published version is incomplete.",
                 )
 
             self._write_current(locked_site, version_number)
@@ -202,18 +202,12 @@ class PublishService:
                     locked_site.pages.filter(
                         is_enabled=True,
                         html_file__isnull=False,
-                    ).exclude(html_file="")
+                    ).exclude(html_file=""),
                 )
                 self._validate_readiness(locked_site, pages)
 
-                last_version = (
-                    SiteVersion.objects.filter(site=locked_site)
-                    .order_by("-version_number")
-                    .first()
-                )
-                version_number = (
-                    last_version.version_number + 1 if last_version else 1
-                )
+                last_version = SiteVersion.objects.filter(site=locked_site).order_by("-version_number").first()
+                version_number = last_version.version_number + 1 if last_version else 1
                 version = SiteVersion.objects.create(
                     site=locked_site,
                     version_number=version_number,
@@ -262,7 +256,7 @@ class PublishService:
                 locked_site.status = locked_site.Status.PUBLISHED
                 locked_site.save(update_fields=["status"])
                 Page.objects.filter(pk__in=[p.pk for p in pages]).update(
-                    status=Page.Status.PUBLISHED
+                    status=Page.Status.PUBLISHED,
                 )
                 self._write_current(locked_site, version_number)
         except Exception:

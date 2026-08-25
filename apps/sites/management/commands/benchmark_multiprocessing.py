@@ -1,7 +1,7 @@
+from math import ceil
 import multiprocessing
 import statistics
 import time
-from math import ceil
 
 from django.core.management.base import BaseCommand, CommandError
 
@@ -52,10 +52,7 @@ def get_worker_memory():
 
 
 class Command(BaseCommand):
-    help = (
-        "Benchmark CPU-heavy HTML processing "
-        "using multiprocessing."
-    )
+    help = "Benchmark CPU-heavy HTML processing using multiprocessing."
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -69,10 +66,7 @@ class Command(BaseCommand):
             "--workers",
             type=int,
             default=max(1, multiprocessing.cpu_count() - 1),
-            help=(
-                "Number of worker processes "
-                "(default: CPU count minus one)."
-            ),
+            help=("Number of worker processes (default: CPU count minus one)."),
         )
 
         parser.add_argument(
@@ -86,10 +80,7 @@ class Command(BaseCommand):
             "--warmups",
             type=int,
             default=3,
-            help=(
-                "Warm-up runs excluded from results "
-                "(default: 3)."
-            ),
+            help=("Warm-up runs excluded from results (default: 3)."),
         )
 
     def handle(self, *args, **options):
@@ -110,28 +101,22 @@ class Command(BaseCommand):
             site = Site.objects.get(pk=site_id)
         except Site.DoesNotExist as exc:
             raise CommandError(
-                f"Site {site_id} does not exist."
+                f"Site {site_id} does not exist.",
             ) from exc
 
         documents = self._load_documents(site)
 
-        page_count = sum(
-            1
-            for document in documents
-            if document["kind"] == "page"
-        )
+        page_count = sum(1 for document in documents if document["kind"] == "page")
 
         document_count = len(documents)
 
         self.stdout.write(
-            f"Loaded {document_count} documents "
-            f"({page_count} pages + header + footer)."
+            f"Loaded {document_count} documents ({page_count} pages + header + footer).",
         )
 
         context = multiprocessing.get_context("spawn")
 
         with context.Pool(processes=workers) as pool:
-
             # --------------------------------------------------
             # Warm-up
             # --------------------------------------------------
@@ -144,7 +129,7 @@ class Command(BaseCommand):
                     )
                 except Exception as exc:
                     raise CommandError(
-                        f"Warm-up {warmup_number} failed: {exc}"
+                        f"Warm-up {warmup_number} failed: {exc}",
                     ) from exc
 
             # --------------------------------------------------
@@ -159,7 +144,6 @@ class Command(BaseCommand):
             benchmark_started = time.perf_counter()
 
             for run_number in range(1, runs + 1):
-
                 started = time.perf_counter()
 
                 try:
@@ -172,7 +156,7 @@ class Command(BaseCommand):
                     failures += 1
 
                     self.stderr.write(
-                        f"Run {run_number} failed: {exc}"
+                        f"Run {run_number} failed: {exc}",
                     )
 
                     continue
@@ -185,10 +169,7 @@ class Command(BaseCommand):
                 # Worker CPU
                 # ----------------------------------------------
 
-                run_cpu = sum(
-                    result["cpu_time"]
-                    for result in results
-                )
+                run_cpu = sum(result["cpu_time"] for result in results)
 
                 worker_cpu_samples.append(run_cpu)
 
@@ -196,24 +177,18 @@ class Command(BaseCommand):
                 # Worker memory
                 # ----------------------------------------------
 
-                memory_values = [
-                    result["memory"]
-                    for result in results
-                    if result["memory"] is not None
-                ]
+                memory_values = [result["memory"] for result in results if result["memory"] is not None]
 
                 if memory_values:
                     worker_memory_samples.append(
-                        max(memory_values)
+                        max(memory_values),
                     )
 
-            total_wall_time = (
-                time.perf_counter() - benchmark_started
-            )
+            total_wall_time = time.perf_counter() - benchmark_started
 
         if not samples:
             raise CommandError(
-                "All measured runs failed."
+                "All measured runs failed.",
             )
 
         self._write_results(
@@ -243,17 +218,17 @@ class Command(BaseCommand):
     ):
         if workers < 1:
             raise CommandError(
-                "--workers must be at least 1."
+                "--workers must be at least 1.",
             )
 
         if runs < 1:
             raise CommandError(
-                "--runs must be at least 1."
+                "--runs must be at least 1.",
             )
 
         if warmups < 0:
             raise CommandError(
-                "--warmups cannot be negative."
+                "--warmups cannot be negative.",
             )
 
     # ==========================================================
@@ -278,7 +253,7 @@ class Command(BaseCommand):
 
         if not site.header:
             raise CommandError(
-                "Site has no header file."
+                "Site has no header file.",
             )
 
         documents.append(
@@ -286,7 +261,7 @@ class Command(BaseCommand):
                 "kind": "header",
                 "slug": None,
                 "html": self._read(site.header),
-            }
+            },
         )
 
         # ------------------------------------------------------
@@ -295,7 +270,7 @@ class Command(BaseCommand):
 
         if not site.footer:
             raise CommandError(
-                "Site has no footer file."
+                "Site has no footer file.",
             )
 
         documents.append(
@@ -303,30 +278,25 @@ class Command(BaseCommand):
                 "kind": "footer",
                 "slug": None,
                 "html": self._read(site.footer),
-            }
+            },
         )
 
         # ------------------------------------------------------
         # Pages
         # ------------------------------------------------------
 
-        pages = (
-            site.pages
-            .filter(
-                is_enabled=True,
-                html_file__isnull=False,
-            )
-            .exclude(
-                html_file=""
-            )
+        pages = site.pages.filter(
+            is_enabled=True,
+            html_file__isnull=False,
+        ).exclude(
+            html_file="",
         )
 
         pages = list(pages)
 
         if not pages:
             raise CommandError(
-                "Site has no enabled pages "
-                "with HTML files."
+                "Site has no enabled pages with HTML files.",
             )
 
         for page in pages:
@@ -335,7 +305,7 @@ class Command(BaseCommand):
                     "kind": "page",
                     "slug": page.slug,
                     "html": self._read(page.html_file),
-                }
+                },
             )
 
         return documents
@@ -382,8 +352,9 @@ class Command(BaseCommand):
         p95_index = min(
             len(ordered_samples) - 1,
             ceil(
-                len(ordered_samples) * 0.95
-            ) - 1,
+                len(ordered_samples) * 0.95,
+            )
+            - 1,
         )
 
         p95 = ordered_samples[p95_index]
@@ -392,21 +363,13 @@ class Command(BaseCommand):
         # Worker CPU statistics
         # ------------------------------------------------------
 
-        average_worker_cpu = (
-            statistics.mean(worker_cpu_samples)
-            if worker_cpu_samples
-            else None
-        )
+        average_worker_cpu = statistics.mean(worker_cpu_samples) if worker_cpu_samples else None
 
         # ------------------------------------------------------
         # Worker memory statistics
         # ------------------------------------------------------
 
-        max_worker_memory = (
-            max(worker_memory_samples)
-            if worker_memory_samples
-            else None
-        )
+        max_worker_memory = max(worker_memory_samples) if worker_memory_samples else None
 
         # ------------------------------------------------------
         # Output
@@ -414,43 +377,43 @@ class Command(BaseCommand):
 
         self.stdout.write("")
         self.stdout.write(
-            "=== Multiprocessing Benchmark ==="
+            "=== Multiprocessing Benchmark ===",
         )
 
         self.stdout.write(
-            f"Operation: CPU-heavy HTML processing"
+            "Operation: CPU-heavy HTML processing",
         )
 
         self.stdout.write(
-            f"Site ID: {site_id}"
+            f"Site ID: {site_id}",
         )
 
         self.stdout.write(
-            f"Documents: {document_count}"
+            f"Documents: {document_count}",
         )
 
         self.stdout.write(
-            f"Pages: {page_count}"
+            f"Pages: {page_count}",
         )
 
         self.stdout.write(
-            f"Workers: {workers}"
+            f"Workers: {workers}",
         )
 
         self.stdout.write(
-            f"Warm-ups: {warmups}"
+            f"Warm-ups: {warmups}",
         )
 
         self.stdout.write(
-            f"Measured runs: {runs}"
+            f"Measured runs: {runs}",
         )
 
         self.stdout.write(
-            f"Successful runs: {len(samples)}"
+            f"Successful runs: {len(samples)}",
         )
 
         self.stdout.write(
-            f"Failures: {failures}"
+            f"Failures: {failures}",
         )
 
         # ------------------------------------------------------
@@ -461,28 +424,27 @@ class Command(BaseCommand):
         self.stdout.write("--- Wall Time ---")
 
         self.stdout.write(
-            f"Min: {min(samples):.6f}s"
+            f"Min: {min(samples):.6f}s",
         )
 
         self.stdout.write(
-            f"Max: {max(samples):.6f}s"
+            f"Max: {max(samples):.6f}s",
         )
 
         self.stdout.write(
-            f"Average: {average:.6f}s"
+            f"Average: {average:.6f}s",
         )
 
         self.stdout.write(
-            f"Median: {median:.6f}s"
+            f"Median: {median:.6f}s",
         )
 
         self.stdout.write(
-            f"P95: {p95:.6f}s"
+            f"P95: {p95:.6f}s",
         )
 
         self.stdout.write(
-            f"Total benchmark time: "
-            f"{total_wall_time:.6f}s"
+            f"Total benchmark time: {total_wall_time:.6f}s",
         )
 
         # ------------------------------------------------------
@@ -494,12 +456,11 @@ class Command(BaseCommand):
 
         if average_worker_cpu is not None:
             self.stdout.write(
-                f"Average worker CPU: "
-                f"{average_worker_cpu:.6f}s"
+                f"Average worker CPU: {average_worker_cpu:.6f}s",
             )
         else:
             self.stdout.write(
-                "Worker CPU: unavailable"
+                "Worker CPU: unavailable",
             )
 
         # ------------------------------------------------------
@@ -511,12 +472,11 @@ class Command(BaseCommand):
 
         if max_worker_memory is not None:
             self.stdout.write(
-                f"Maximum worker RSS observed: "
-                f"{max_worker_memory:.2f} MB"
+                f"Maximum worker RSS observed: {max_worker_memory:.2f} MB",
             )
         else:
             self.stdout.write(
-                "Worker memory: unavailable"
+                "Worker memory: unavailable",
             )
 
         self.stdout.write("")

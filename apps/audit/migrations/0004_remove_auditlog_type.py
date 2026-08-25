@@ -4,14 +4,13 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('audit', '0003_remove_auditlog_field_name_remove_auditlog_new_value_and_more'),
+        ("audit", "0003_remove_auditlog_field_name_remove_auditlog_new_value_and_more"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='auditlog',
-            name='type',
+            model_name="auditlog",
+            name="type",
         ),
     ]

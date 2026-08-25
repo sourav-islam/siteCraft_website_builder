@@ -1,6 +1,6 @@
+from math import ceil
 import statistics
 import time
-from math import ceil
 
 from django.core.management.base import BaseCommand, CommandError
 
@@ -67,12 +67,9 @@ class Command(BaseCommand):
             raise CommandError(f"Site {site_id} does not exist.") from exc
 
         documents = self._load_documents(site)
-        page_count = sum(
-            document["kind"] == "page" for document in documents
-        )
+        page_count = sum(document["kind"] == "page" for document in documents)
         self.stdout.write(
-            f"Loaded {len(documents)} documents "
-            f"({page_count} pages + header + footer)."
+            f"Loaded {len(documents)} documents ({page_count} pages + header + footer).",
         )
 
         for warmup_number in range(1, warmups + 1):
@@ -80,7 +77,7 @@ class Command(BaseCommand):
                 self._transform_documents(documents)
             except Exception as exc:
                 raise CommandError(
-                    f"Warm-up {warmup_number} failed: {exc}"
+                    f"Warm-up {warmup_number} failed: {exc}",
                 ) from exc
 
         samples = []
@@ -134,14 +131,14 @@ class Command(BaseCommand):
             if not file_field:
                 raise CommandError(f"Site has no {kind} file.")
             documents.append(
-                {"kind": kind, "slug": None, "html": self._read(file_field)}
+                {"kind": kind, "slug": None, "html": self._read(file_field)},
             )
 
         pages = list(
             site.pages.filter(
                 is_enabled=True,
                 html_file__isnull=False,
-            ).exclude(html_file="")
+            ).exclude(html_file=""),
         )
         if not pages:
             raise CommandError("Site has no enabled pages with HTML files.")
@@ -152,7 +149,7 @@ class Command(BaseCommand):
                     "kind": "page",
                     "slug": page.slug,
                     "html": self._read(page.html_file),
-                }
+                },
             )
         return documents
 
@@ -207,13 +204,13 @@ class Command(BaseCommand):
         self.stdout.write("")
         self.stdout.write("--- CPU ---")
         self.stdout.write(
-            f"Average CPU: {statistics.mean(cpu_samples):.6f}s"
+            f"Average CPU: {statistics.mean(cpu_samples):.6f}s",
         )
         self.stdout.write("")
         self.stdout.write("--- Memory ---")
         if memory_samples:
             self.stdout.write(
-                f"Maximum RSS observed: {max(memory_samples):.2f} MB"
+                f"Maximum RSS observed: {max(memory_samples):.2f} MB",
             )
         else:
             self.stdout.write("Memory: unavailable")

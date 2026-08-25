@@ -1,7 +1,8 @@
-import requests
 import base64
+
 from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
+import requests
 
 from apps.blog_migration.exceptions import ExportError
 
@@ -21,7 +22,7 @@ class ImageDownloaderService:
     def _download_single_image(cls, image_data: dict, folder: str, index: int) -> dict:
         src = image_data["src"]
         alt = image_data.get("alt", "")
-        
+
         if src.startswith("data:"):
             # Handle data URL
             # Split the data URL: data:[<mediatype>][;base64],<data>
@@ -31,7 +32,7 @@ class ImageDownloaderService:
                 image_content = base64.b64decode(data)
             else:
                 image_content = data.encode("utf-8")
-            
+
             # Get content type from header
             content_type = header.split(";")[0].split(":")[1] if ";" in header else "image/jpeg"
         else:
@@ -56,10 +57,10 @@ class ImageDownloaderService:
     def _get_extension(content_type: str, url: str) -> str:
         if "jpeg" in content_type or "jpg" in url:
             return ".jpg"
-        elif "png" in content_type or "png" in url:
+        if "png" in content_type or "png" in url:
             return ".png"
-        elif "gif" in content_type or "gif" in url:
+        if "gif" in content_type or "gif" in url:
             return ".gif"
-        elif "webp" in content_type or "webp" in url:
+        if "webp" in content_type or "webp" in url:
             return ".webp"
         return ".jpg"

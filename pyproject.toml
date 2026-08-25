@@ -1,0 +1,100 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sitecraft-website-builder"
+version = "0.1.0"
+description = "SiteCraft Website Builder - Django-based site builder API"
+requires-python = ">=3.10"
+dependencies = [
+    "asgiref==3.11.1",
+    "Django==6.0.7",
+    "djangorestframework==3.17.1",
+    "djangorestframework_simplejwt==5.5.1",
+    "pillow==12.3.0",
+    "psycopg==3.3.4",
+    "psycopg-binary==3.3.4",
+    "PyJWT==2.13.0",
+    "python-dotenv==1.2.2",
+    "sqlparse==0.5.5",
+    "typing_extensions==4.16.0",
+    "requests>=2.32,<3.0",
+    "beautifulsoup4>=4.12,<5.0",
+    "lxml>=5.2,<6.0",
+    "redis>=5.0,<6.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff>=0.5.0",
+]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 120
+indent-width = 4
+
+[tool.ruff.lint]
+select = [
+    "E",
+    "F",
+    "F401",
+    "F841",
+    "I",
+    "W",
+    "W291",
+    "W292",
+    "W293",
+    "B",
+    "UP",
+    "SIM",
+    "C4",
+    "PERF",
+    "FLY",
+    "PIE",
+    "Q",
+    "RSE",
+    "RET",
+    "TCH",
+    "INT",
+    "PLE",
+    "PLW",
+]
+ignore = [
+    "E501",
+    "SIM105",
+    "SIM108",
+    "B904",
+    "RET504",
+]
+fixable = ["ALL"]
+unfixable = []
+
+[tool.ruff.lint.per-file-ignores]
+"*/migrations/*" = ["ALL"]
+"apps/blog_migration/management/commands/migrate_blog.py" = ["B008", "SIM115", "ARG", "PERF203"]
+"apps/blog_migration/services/*.py" = ["B008", "SIM115", "S310", "PERF203"]
+"apps/sites/management/commands/*.py" = ["PERF"]
+"config/settings.py" = ["S105", "S608", "TRY003", "PLW1508"]
+"manage.py" = ["D"]
+"**/tests.py" = ["S101", "SIM115"]
+"**/test_*.py" = ["S101", "SIM115"]
+"**/admin.py" = ["SLF001", "ARG"]
+"**/permissions.py" = ["ARG"]
+"**/apps.py" = ["ARG"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["apps", "config"]
+known-third-party = ["django", "rest_framework", "simplejwt"]
+case-sensitive = true
+force-single-line = false
+force-sort-within-sections = true
+order-by-type = true
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"
+skip-magic-trailing-comma = false
+preview = true

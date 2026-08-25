@@ -1,13 +1,12 @@
 from django.conf import settings
 from django.db import models
 
+from apps.common.models import TimeStampedModel
 from apps.common.validators import (
     validate_css_file_extension,
     validate_file_size,
     validate_html_file_extension,
 )
-
-from apps.common.models import TimeStampedModel
 
 
 class Site(TimeStampedModel):

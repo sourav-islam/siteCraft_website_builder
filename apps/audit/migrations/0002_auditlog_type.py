@@ -4,15 +4,19 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('audit', '0001_initial'),
+        ("audit", "0001_initial"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='auditlog',
-            name='type',
-            field=models.CharField(blank=True, default='', help_text='Human-readable model type for this audit row, e.g. site or page.', max_length=50),
+            model_name="auditlog",
+            name="type",
+            field=models.CharField(
+                blank=True,
+                default="",
+                help_text="Human-readable model type for this audit row, e.g. site or page.",
+                max_length=50,
+            ),
         ),
     ]

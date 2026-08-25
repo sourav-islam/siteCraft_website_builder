@@ -1,5 +1,7 @@
-from django.core.exceptions import ValidationError
 import os
+
+from django.core.exceptions import ValidationError
+
 
 def validate_file_size(file, max_size_mb=5):
     """
@@ -8,7 +10,7 @@ def validate_file_size(file, max_size_mb=5):
 
     if file.size > max_size_mb * 1024 * 1024:
         raise ValidationError(
-            f"File size cannot exceed {max_size_mb} MB."
+            f"File size cannot exceed {max_size_mb} MB.",
         )
 
 
@@ -23,7 +25,7 @@ def validate_html_file_extension(file):
 
     if ext not in allowed_extensions:
         raise ValidationError(
-            "Only .html and .htm files are allowed."
+            "Only .html and .htm files are allowed.",
         )
 
 
@@ -35,5 +37,5 @@ def validate_css_file_extension(file):
 
     if ext != ".css":
         raise ValidationError(
-            "Only .css files are allowed."
+            "Only .css files are allowed.",
         )

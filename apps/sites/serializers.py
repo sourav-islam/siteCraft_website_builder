@@ -4,7 +4,6 @@ from .models import Site, SiteVersion
 
 
 class SiteSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = Site
 
