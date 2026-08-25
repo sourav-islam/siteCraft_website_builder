@@ -7,16 +7,124 @@ from unittest import mock
 from django.contrib.auth import get_user_model
 from django.core.files.storage import default_storage
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.db import IntegrityError
 from django.http import Http404
 from django.test import TestCase, override_settings
 from django.test.client import RequestFactory
+from django.urls import reverse
+from rest_framework import status
 from rest_framework.test import APIClient
 
+from apps.audit.models import AuditLog
 from apps.common.exceptions import PublishValidationError
+from apps.common.services import LockService
 from apps.pages.models import Page
 from apps.sites.models import Site, SiteVersion
+from apps.sites.serializers import SiteRollbackSerializer
 from apps.sites.services.publish_service import PublishService
 from apps.sites.services.render_service import PublishedSiteRenderService
+from apps.sites.services.site_service import SiteService
+
+User = get_user_model()
+
+
+class FakeRedis:
+    def __init__(self):
+        self._store = {}
+
+    def set(self, name, value, ex=None, nx=False):
+        if nx and name in self._store:
+            return False
+        self._store[name] = {"value": value, "ttl": ex}
+        return True
+
+    def get(self, name):
+        return self._store[name]["value"] if name in self._store else None
+
+    def delete(self, name):
+        self._store.pop(name, None)
+
+    def ttl(self, name):
+        return self._store[name]["ttl"] if name in self._store else -2
+
+    def expire(self, name, ttl):
+        if name in self._store:
+            self._store[name]["ttl"] = ttl
+
+
+class SiteModelTests(TestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user(
+            username="smo",
+            email="smo@example.com",
+            password="password",
+        )
+
+    def test_str_returns_name(self):
+        site = Site.objects.create(owner=self.owner, name="My Website")
+        self.assertEqual(str(site), "My Website")
+
+    def test_status_default_is_draft(self):
+        site = Site.objects.create(owner=self.owner, name="D")
+        self.assertEqual(site.status, Site.Status.DRAFT)
+
+    def test_is_public_default_false(self):
+        site = Site.objects.create(owner=self.owner, name="P")
+        self.assertFalse(site.is_public)
+
+
+class SiteVersionModelTests(TestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user(
+            username="svc",
+            email="svc@example.com",
+            password="password",
+        )
+        self.site = Site.objects.create(owner=self.owner, name="V")
+
+    def test_unique_constraint_per_site_version(self):
+        SiteVersion.objects.create(site=self.site, version_number=1)
+        duplicate = SiteVersion(site=self.site, version_number=1)
+        with self.assertRaises(IntegrityError):
+            duplicate.save()
+
+    def test_str_includes_name_and_version(self):
+        v = SiteVersion.objects.create(site=self.site, version_number=3)
+        self.assertIn("V", str(v))
+        self.assertIn("Version 3", str(v))
+
+
+class SiteRollbackSerializerTests(TestCase):
+    def test_version_must_be_positive(self):
+        serializer = SiteRollbackSerializer(data={"version": 0})
+        self.assertFalse(serializer.is_valid())
+        serializer2 = SiteRollbackSerializer(data={"version": 1})
+        self.assertTrue(serializer2.is_valid())
+
+
+class SiteServiceTests(TestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user(
+            username="ssvc",
+            email="ssvc@example.com",
+            password="password",
+        )
+
+    def test_create_site_creates_audit_row(self):
+        site = SiteService.create_site(owner=self.owner, name="Created", actor=self.owner)
+        self.assertEqual(site.name, "Created")
+        self.assertEqual(
+            AuditLog.objects.filter(action=AuditLog.Action.CREATED).count(),
+            1,
+        )
+
+    def test_update_site_records_changes_and_saves(self):
+        site = SiteService.create_site(owner=self.owner, name="Before")
+        SiteService.update_site(site, name="After", actor=self.owner)
+        site.refresh_from_db()
+        self.assertEqual(site.name, "After")
+        log = AuditLog.objects.get(action=AuditLog.Action.UPDATED)
+        self.assertIn("name", log.changes)
 
 
 class PublishAndRollbackTests(TestCase):
@@ -64,6 +172,16 @@ class PublishAndRollbackTests(TestCase):
             slug=slug,
             html_file=self._upload(f"{slug}.html", f"<main>{title}</main>"),
         )
+
+    def test_validate_readiness_requires_header_footer(self):
+        empty_site = Site.objects.create(owner=self.owner, name="Empty")
+        with self.assertRaises(PublishValidationError):
+            self.service._validate_readiness(empty_site, [])
+
+    def test_validate_readiness_requires_pages(self):
+        header_only = self._create_site("HdrSite", self.owner)
+        with self.assertRaises(PublishValidationError):
+            self.service._validate_readiness(header_only, [])
 
     def test_publish_creates_immutable_versions_and_current_pointer(self):
         first = self.service.publish(self.site, actor=self.owner)
@@ -346,3 +464,240 @@ class PublishedSiteRenderingTests(TestCase):
 
         with self.assertRaises(Http404):
             self.service.get_context(self.site)
+
+
+class SiteApiBase(TestCase):
+    """Shared setup for Sites API tests."""
+
+    def setUp(self):
+        self.client = APIClient()
+        self.owner = User.objects.create_user(
+            username="sapi",
+            email="sapi@example.com",
+            password="password",
+        )
+        self.other = User.objects.create_user(
+            username="sapi_other",
+            email="sapi_other@example.com",
+            password="password",
+        )
+        self.redis_patcher = mock.patch(
+            "apps.common.services.redis_client",
+            new_callable=lambda: FakeRedis(),
+        )
+        self.redis_patcher.start()
+        self.client.force_authenticate(user=self.owner)
+
+    def tearDown(self):
+        self.redis_patcher.stop()
+
+    def _list_url(self):
+        return reverse("site-list")
+
+    def _detail_url(self, site):
+        return reverse("site-detail", kwargs={"pk": site.pk})
+
+    def _lock_url(self, site):
+        return reverse("site-lock", kwargs={"pk": site.pk})
+
+    def _heartbeat_url(self, site):
+        return reverse("site-heartbeat", kwargs={"pk": site.pk})
+
+
+class SiteListCreateAPITests(SiteApiBase):
+    def test_create_site_success(self):
+        res = self.client.post(
+            self._list_url(),
+            {"name": "Created Site", "description": "d"},
+            format="json",
+        )
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Site.objects.count(), 1)
+        site = Site.objects.first()
+        self.assertEqual(site.owner, self.owner)
+        self.assertEqual(site.created_by, self.owner)
+        # Audit create log exists
+        self.assertTrue(
+            AuditLog.objects.filter(
+                action=AuditLog.Action.CREATED,
+                object_id=site.id,
+            ).exists(),
+        )
+
+    def test_list_returns_owned_sites(self):
+        SiteService.create_site(owner=self.owner, actor=self.owner, name="Mine")
+        SiteService.create_site(owner=self.other, actor=self.other, name="Yours")
+        res = self.client.get(self._list_url())
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(res.data["results"]), 1)
+        self.assertEqual(res.data["results"][0]["name"], "Mine")
+
+    def test_list_unauthenticated_401(self):
+        self.client.logout()
+        res = self.client.get(self._list_url())
+        self.assertEqual(res.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_search_and_ordering(self):
+        SiteService.create_site(owner=self.owner, actor=self.owner, name="Banana")
+        SiteService.create_site(owner=self.owner, actor=self.owner, name="Apple")
+        res = self.client.get(self._list_url(), {"search": "Apple"})
+        self.assertEqual(len(res.data["results"]), 1)
+        res_ordered = self.client.get(self._list_url(), {"ordering": "name"})
+        names = [s["name"] for s in res_ordered.data["results"]]
+        self.assertEqual(names, sorted(names))
+
+
+class SiteRetrieveUpdateDestroyAPITests(SiteApiBase):
+    def setUp(self):
+        super().setUp()
+        self.site = SiteService.create_site(
+            owner=self.owner,
+            actor=self.owner,
+            name="Original",
+            description="orig",
+        )
+
+    def test_retrieve_site(self):
+        res = self.client.get(self._detail_url(self.site))
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(res.data["name"], "Original")
+
+    def test_retrieve_other_owner_forbidden(self):
+        self.client.force_authenticate(user=self.other)
+        res = self.client.get(self._detail_url(self.site))
+        self.assertEqual(res.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_update_site_records_audit_log(self):
+        res = self.client.patch(
+            self._detail_url(self.site),
+            {"name": "Changed"},
+            format="json",
+        )
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.site.refresh_from_db()
+        self.assertEqual(self.site.name, "Changed")
+        self.assertTrue(
+            AuditLog.objects.filter(action=AuditLog.Action.UPDATED).exists(),
+        )
+
+    def test_update_blocked_when_locked_by_other(self):
+        LockService.acquire_lock("site", self.site.id, self.other.id)
+        res = self.client.patch(
+            self._detail_url(self.site),
+            {"name": "Blocked"},
+            format="json",
+        )
+        self.assertEqual(res.status_code, status.HTTP_409_CONFLICT)
+        self.assertEqual(res.data["code"], "site_locked")
+
+    def test_destroy_blocked_when_locked(self):
+        LockService.acquire_lock("site", self.site.id, self.other.id)
+        res = self.client.delete(self._detail_url(self.site))
+        self.assertEqual(res.status_code, status.HTTP_409_CONFLICT)
+
+    def test_destroy_success_and_audit_log_delete(self):
+        site_id = self.site.id
+        res = self.client.delete(self._detail_url(self.site))
+        self.assertEqual(res.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(Site.objects.filter(pk=site_id).exists())
+        self.assertTrue(
+            AuditLog.objects.filter(
+                action=AuditLog.Action.DELETED,
+                object_id=site_id,
+            ).exists(),
+        )
+
+
+class SiteLockAndHeartbeatAPIViewTests(SiteApiBase):
+    def setUp(self):
+        super().setUp()
+        self.site = SiteService.create_site(
+            owner=self.owner,
+            actor=self.owner,
+            name="Lockable",
+        )
+
+    def test_get_lock_status_free(self):
+        res = self.client.get(self._lock_url(self.site))
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertFalse(res.data["lock"]["locked"])
+
+    def test_acquire_lock(self):
+        res = self.client.post(self._lock_url(self.site))
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertTrue(res.data["lock"]["locked"])
+        # Now the same user can't re-acquire
+        res2 = self.client.post(self._lock_url(self.site))
+        self.assertEqual(res2.status_code, status.HTTP_409_CONFLICT)
+
+    def test_other_user_release_is_403(self):
+        self.client.post(self._lock_url(self.site))
+        self.client.force_authenticate(user=self.other)
+        res = self.client.delete(self._lock_url(self.site))
+        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_release_lock_when_missing_is_404(self):
+        res = self.client.delete(self._lock_url(self.site))
+        self.assertEqual(res.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_heartbeat_after_acquire_is_ok(self):
+        self.client.post(self._lock_url(self.site))
+        res = self.client.post(self._heartbeat_url(self.site))
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertIn("refreshed_at", res.data["lock"])
+
+    def test_heartbeat_without_lock_is_404(self):
+        res = self.client.post(self._heartbeat_url(self.site))
+        self.assertEqual(res.status_code, status.HTTP_404_NOT_FOUND)
+
+
+class PublishApiTests(SiteApiBase):
+    """Publish and rollback API-level tests."""
+
+    def setUp(self):
+        super().setUp()
+        self.media_root = tempfile.mkdtemp()
+        self.override_media = override_settings(MEDIA_ROOT=self.media_root)
+        self.override_media.enable()
+        self.site = Site.objects.create(
+            owner=self.owner,
+            name="PubSite",
+            header=SimpleUploadedFile("h.html", b"<header/>"),
+            footer=SimpleUploadedFile("f.html", b"<footer/>"),
+            global_css=SimpleUploadedFile("g.css", b"body{}"),
+        )
+        self.page = Page.objects.create(
+            site=self.site,
+            title="H",
+            slug="home",
+            html_file=SimpleUploadedFile("h.html", b"<main/>"),
+        )
+
+    def tearDown(self):
+        self.override_media.disable()
+        shutil.rmtree(self.media_root, ignore_errors=True)
+
+    def test_publish_api_success(self):
+        res = self.client.post(
+            reverse("site-publish", kwargs={"pk": self.site.pk}),
+        )
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(res.data["version"], 1)
+        self.assertEqual(self.site.versions.count(), 1)
+
+    def test_rollback_api_missing_version_is_400(self):
+        res = self.client.post(
+            reverse("site-rollback", kwargs={"pk": self.site.pk}),
+            {"version": 99},
+            format="json",
+        )
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_publish_api_blocked_by_lock(self):
+        self.client.force_authenticate(user=self.other)
+        LockService.acquire_lock("site", self.site.id, self.other.id)
+        self.client.force_authenticate(user=self.owner)
+        res = self.client.post(
+            reverse("site-publish", kwargs={"pk": self.site.pk}),
+        )
+        self.assertEqual(res.status_code, status.HTTP_409_CONFLICT)
