@@ -3,6 +3,7 @@ from django.db import models
 from django.utils.text import slugify
 
 from apps.common.models import TimeStampedModel
+from apps.common.upload_paths import environment_upload_path
 from apps.common.validators import validate_file_size, validate_html_file_extension
 from apps.sites.models import Site
 
@@ -33,7 +34,7 @@ class Page(TimeStampedModel):
     slug = models.SlugField(max_length=160)
 
     html_file = models.FileField(
-        upload_to="pages/html/",
+        upload_to=environment_upload_path,
         blank=True,
         null=True,
         validators=[validate_file_size, validate_html_file_extension],

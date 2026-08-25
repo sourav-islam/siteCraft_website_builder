@@ -3,12 +3,13 @@ from unittest import mock
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ImproperlyConfigured, ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from rest_framework.exceptions import APIException
 
 from apps.common.exceptions import BadRequest, PublishValidationError, ResourceNotFound
 from apps.common.permissions import CanDelete, HasUpdate, IsOwner
 from apps.common.services import LockService, _serialize_locker
+from apps.common.upload_paths import environment_upload_path
 from apps.common.validators import (
     validate_css_file_extension,
     validate_file_size,
@@ -28,6 +29,67 @@ class AppEnvironmentMediaRootTests(TestCase):
     def test_invalid_environment_raises_configuration_error(self):
         with self.assertRaises(ImproperlyConfigured):
             get_media_root("invalid")
+
+
+class EnvironmentUploadPathTests(TestCase):
+    def setUp(self):
+        from apps.pages.models import Page
+        from apps.sites.models import Site
+
+        self.site = Site(name="Upload Site")
+        self.page = Page(title="Upload Page")
+
+    def test_upload_path_uses_canary_environment_media_root(self):
+        with override_settings(APP_ENV="canary"):
+            self.assertEqual(
+                get_media_root("canary") / environment_upload_path(self.site, "image.jpg"),
+                get_media_root("canary") / "site/image.jpg",
+            )
+
+    def test_upload_path_uses_beta_environment_media_root(self):
+        with override_settings(APP_ENV="beta"):
+            self.assertEqual(
+                get_media_root("beta") / environment_upload_path(self.site, "image.jpg"),
+                get_media_root("beta") / "site/image.jpg",
+            )
+
+    def test_upload_path_uses_production_environment_media_root(self):
+        with override_settings(APP_ENV="production"):
+            self.assertEqual(
+                get_media_root("production") / environment_upload_path(self.page, "page.html"),
+                get_media_root("production") / "page/page.html",
+            )
+
+    def test_existing_file_name_does_not_change_when_environment_changes(self):
+        with override_settings(APP_ENV="canary"):
+            existing_name = environment_upload_path(self.site, "image.jpg")
+
+        with override_settings(APP_ENV="beta"):
+            self.assertEqual(existing_name, "site/image.jpg")
+            self.assertEqual(
+                environment_upload_path(self.site, "image2.jpg"),
+                "site/image2.jpg",
+            )
+
+    def test_invalid_environment_is_rejected(self):
+        with override_settings(APP_ENV="testing"), self.assertRaises(ImproperlyConfigured):
+            environment_upload_path(self.site, "image.jpg")
+
+    def test_all_upload_fields_use_environment_upload_path(self):
+        from django.db import models
+
+        from apps.pages.models import Page
+        from apps.sites.models import Site
+
+        upload_fields = [
+            field
+            for model in (Site, Page)
+            for field in model._meta.fields
+            if isinstance(field, (models.ImageField, models.FileField))
+        ]
+
+        self.assertEqual(len(upload_fields), 6)
+        self.assertTrue(all(field.upload_to is environment_upload_path for field in upload_fields))
 
 
 class CustomExceptionTests(TestCase):

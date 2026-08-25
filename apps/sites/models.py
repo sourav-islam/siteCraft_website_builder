@@ -2,6 +2,7 @@ from django.conf import settings
 from django.db import models
 
 from apps.common.models import TimeStampedModel
+from apps.common.upload_paths import environment_upload_path
 from apps.common.validators import (
     validate_css_file_extension,
     validate_file_size,
@@ -34,19 +35,19 @@ class Site(TimeStampedModel):
     description = models.TextField(blank=True)
 
     logo = models.ImageField(
-        upload_to="sites/logos/",
+        upload_to=environment_upload_path,
         blank=True,
         null=True,
     )
 
     favicon = models.ImageField(
-        upload_to="sites/favicons/",
+        upload_to=environment_upload_path,
         blank=True,
         null=True,
     )
 
     header = models.FileField(
-        upload_to="sites/header/",
+        upload_to=environment_upload_path,
         blank=True,
         null=True,
         validators=[validate_file_size, validate_html_file_extension],
@@ -54,7 +55,7 @@ class Site(TimeStampedModel):
     )
 
     footer = models.FileField(
-        upload_to="sites/footer/",
+        upload_to=environment_upload_path,
         blank=True,
         null=True,
         validators=[validate_file_size, validate_html_file_extension],
@@ -62,7 +63,7 @@ class Site(TimeStampedModel):
     )
 
     global_css = models.FileField(
-        upload_to="sites/global_css/",
+        upload_to=environment_upload_path,
         blank=True,
         null=True,
         validators=[validate_file_size, validate_css_file_extension],
