@@ -1,7 +1,7 @@
 import json
+from pathlib import Path
 import shutil
 import tempfile
-from pathlib import Path
 
 from django.contrib.auth import get_user_model
 from django.http import Http404

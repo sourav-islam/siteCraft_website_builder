@@ -1,6 +1,5 @@
 import shutil
 import tempfile
-from unittest import mock
 
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings

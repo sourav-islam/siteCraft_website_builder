@@ -1,17 +1,16 @@
 from unittest import mock
 
 from django.contrib.auth import get_user_model
-from django.urls import reverse
 from django.test import TestCase
+from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient
 
 from apps.audit.models import AuditLog
 from apps.common.services import LockService
-from apps.pages.services import PageService
 from apps.pages.models import Page
+from apps.pages.services import PageService
 from apps.sites.models import Site
-
 
 User = get_user_model()
 

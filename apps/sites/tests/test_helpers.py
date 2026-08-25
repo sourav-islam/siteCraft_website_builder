@@ -5,11 +5,6 @@ from django.test import TestCase
 from django.urls import reverse
 from rest_framework.test import APIClient
 
-from apps.audit.models import AuditLog
-from apps.common.services import LockService
-from apps.sites.models import Site
-from apps.sites.services.site_service import SiteService
-
 User = get_user_model()
 
 

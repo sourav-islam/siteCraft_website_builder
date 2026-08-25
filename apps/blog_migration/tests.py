@@ -29,7 +29,7 @@ class BlogMigrationExceptionTests(TestCase):
 class ContentCleanerServiceTests(TestCase):
     def test_clean_content_strips_google_doc_styles(self):
         html = (
-            '<html><head><style>.cls-1 { color:red;</style></head>'
+            "<html><head><style>.cls-1 { color:red;</style></head>"
             '<body><p class="cls-1" id="p1" style="color:red">'
             "<span>Hello</span> <b>world</b></p>"
             "<p></p></body></html>"

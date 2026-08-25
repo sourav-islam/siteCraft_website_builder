@@ -8,7 +8,7 @@ from .views import (
 )
 
 urlpatterns = [
-    path("/login", LoginAPIView.as_view(), name="token_obtain_pair"),
+    path("/login", LoginAPIView.as_view(), name="user_login"),
     path("/login/refresh", TokenRefreshView.as_view(), name="token_refresh"),
     path("/register", RegisterAPIView.as_view(), name="user_register"),
     path("/profile", UserProfileAPIView.as_view(), name="user_profile"),

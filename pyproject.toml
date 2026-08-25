@@ -39,13 +39,8 @@ indent-width = 4
 select = [
     "E",
     "F",
-    "F401",
-    "F841",
     "I",
     "W",
-    "W291",
-    "W292",
-    "W293",
     "B",
     "UP",
     "SIM",
@@ -68,8 +63,6 @@ ignore = [
     "B904",
     "RET504",
 ]
-fixable = ["ALL"]
-unfixable = []
 
 [tool.ruff.lint.per-file-ignores]
 "*/migrations/*" = ["ALL"]
@@ -86,11 +79,9 @@ unfixable = []
 
 [tool.ruff.lint.isort]
 known-first-party = ["apps", "config"]
-known-third-party = ["django", "rest_framework", "simplejwt"]
+known-third-party = ["django", "rest_framework"]
 case-sensitive = true
-force-single-line = false
 force-sort-within-sections = true
-order-by-type = true
 
 [tool.ruff.format]
 quote-style = "double"
