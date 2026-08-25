@@ -1,316 +1,244 @@
 # SiteCraft Website Builder
 
-SiteCraft Website Builder is a Django backend for managing websites, pages, and
-content imports. The project combines a REST API for authentication, site
-management, page management, and a utility app that migrates public Google Docs
-content into site pages.
+SiteCraft is a Django and Django REST Framework backend for building and
+publishing user-owned websites. It provides JWT authentication, site and page
+management, editor locks backed by Redis, versioned publishing, audit logging,
+and a Google Docs import pipeline.
 
-## Overview
+## Status
 
-This repository currently provides:
-- JWT-based authentication
-- user-owned site management
-- page management with JSON-based content storage
-- site/page locking, lock status checks, and heartbeat support (TTL refresh) while editing
-- a Google Docs migration pipeline that imports one or more document tabs into
-  the `pages` app
-- local media storage for uploaded logos, favicons, and imported page images
+This repository is an API backend. It does not include a frontend application
+or a complete production deployment stack. PostgreSQL is required; SQLite is
+not configured as a fallback.
 
-The migration utility is especially useful for editorial workflows where content
-is drafted in Google Docs and then imported into the builder as HTML content.
+## Features
 
-## Tech Stack
+- Custom user accounts with JWT access and refresh tokens
+- Owner-scoped site and page CRUD APIs
+- HTML page files with SEO metadata, page types, homepage flags, and enablement
+- Redis-backed site and page edit locks with TTL heartbeat endpoints
+- Published site manifests with immutable, numbered versions
+- Rollback to an earlier published version
+- Read-only audit log for site activity
+- Public HTML rendering for published sites
+- Import of public Google Docs tabs, including image download and HTML cleanup
+- Local media storage separated by `APP_ENV` (`canary`, `beta`, or `production`)
 
-- Python
-- Django 6
-- Django REST Framework
+## Technology
+
+- Python `>=3.10`
+- Django `6.0.7`
+- Django REST Framework `3.17.1`
 - Simple JWT
-- PostgreSQL for the main database
-- Redis for lock-related support via Docker Compose
-- BeautifulSoup4 + lxml for HTML parsing
-- Requests for remote export/download operations
-- Pillow for image support
+- PostgreSQL `16` (Docker Compose)
+- Redis `7` (Docker Compose)
+- BeautifulSoup4, lxml, Requests, and Pillow
 
-## Project Structure
+## Repository Layout
 
 ```text
-siteCraft_website_builder/
-├── apps/
-│   ├── accounts/         # Auth endpoints and user profile APIs
-│   ├── common/           # Shared permissions, validators, exceptions, health check
-│   ├── sites/            # Site models and API
-│   ├── pages/            # Page models and API
-│   └── blog_migration/   # Google Docs export/import pipeline
-├── config/               # Django settings, root URLs, WSGI/ASGI
-├── media/                # Generated during runtime
-├── docker-compose.yml    # PostgreSQL and Redis services
-├── requirements.txt
-└── manage.py
+apps/
++-- accounts/           # Users, registration, login, and profiles
++-- audit/              # Site audit log
++-- blog_migration/     # Google Docs export/import services and command
++-- common/             # Shared models, permissions, validators, and health
++-- pages/              # Nested page API and HTML file model
++-- sites/              # Site API, publishing, rendering, and versioning
+config/                 # Django settings and root URL configuration
+media/                  # Runtime media; generated environment output
+docker-compose.yml      # Local PostgreSQL and Redis services
+manage.py               # Django administration entry point
+requirements.txt        # Pinned runtime and development dependencies
+pyproject.toml          # Package metadata and Ruff configuration
 ```
 
-## Application Breakdown
+## Quick Start
 
-### accounts
-- Defines a custom `User` model
-- Exposes JWT auth endpoints under `/api/v1/auth/`
+### Prerequisites
 
-### sites
-- Stores a user-owned site record
-- Supports draft, published, and archived statuses
-- Stores branding assets such as `logo` and `favicon`
-- Includes lock, lock-status, and heartbeat endpoints for collaborative edit protection
+- Python 3.10 or newer
+- Docker Engine and Docker Compose
+- Git
 
-### pages
-- Stores site pages
-- Uses a `JSONField` for flexible page content
-- Supports homepage and publish flags
-- Enforces unique slug per site
-- Includes lock, lock-status, and heartbeat endpoints for collaborative editing
-
-### blog_migration
-- Accepts a public Google Docs URL plus one or more tab IDs
-- Exports each tab as HTML
-- Parses title, content, and image references
-- Downloads or decodes images
-- Cleans the exported HTML
-- Creates one `Page` record per tab
-
-### common
-- Holds reusable utilities such as permissions, validation helpers, and the
-  health endpoint
-
-## API Summary
-
-All API routes are prefixed with `/api/v1/`.
-
-### Authentication
-- `POST /api/v1/auth/login/`
-- `POST /api/v1/auth/login/refresh/`
-- `POST /api/v1/auth/register/`
-- `GET /api/v1/auth/profile/`
-
-### Health
-- `GET /api/v1/health/`
-
-### Sites
-- `GET /api/v1/sites/`
-- `POST /api/v1/sites/`
-- `GET /api/v1/sites/<id>/`
-- `PUT /api/v1/sites/<id>/`
-- `PATCH /api/v1/sites/<id>/`
-- `DELETE /api/v1/sites/<id>/`
-- `GET /api/v1/sites/<id>/lock/` — check current lock status
-- `POST /api/v1/sites/<id>/lock/` — acquire edit lock
-- `DELETE /api/v1/sites/<id>/lock/` — release edit lock
-- `POST /api/v1/sites/<id>/heartbeat/` — refresh lock TTL (keep-alive)
-
-### Pages
-- `GET /api/v1/pages/`
-- `POST /api/v1/pages/`
-- `GET /api/v1/pages/<id>/`
-- `PUT /api/v1/pages/<id>/`
-- `PATCH /api/v1/pages/<id>/`
-- `DELETE /api/v1/pages/<id>/`
-- `GET /api/v1/pages/<id>/lock/` — check current lock status
-- `POST /api/v1/pages/<id>/lock/` — acquire edit lock
-- `DELETE /api/v1/pages/<id>/lock/` — release edit lock
-- `POST /api/v1/pages/<id>/heartbeat/` — refresh lock TTL (keep-alive)
-
-Most API routes are protected by authentication by default. Public access is
-limited to registration, login, token refresh, and health check.
-
-## Data Model Summary
-
-### User
-- Custom Django user model
-- Uses unique email addresses
-
-### Site
-- Belongs to a user
-- Contains name, description, status, branding assets, and edit-lock state
-
-### Page
-- Belongs to a site
-- Contains title, slug, JSON content, publish flags, and timestamps
-- Stores imported HTML inside `content`, typically as:
-
-```json
-{
-  "html": "<cleaned html content>"
-}
-```
-
-## Google Docs Migration Workflow
-
-The migration pipeline lives in the `blog_migration` app and is designed for
-public Google Docs documents.
-
-### Input
-- Google Docs document URL
-- site ID
-- comma-separated tab IDs
-
-### Command
-
-```bash
-python manage.py migrate_blog "<google-doc-url>" --site-id 1 --tabs "t.0,t.1,t.2"
-```
-
-### End-to-End Flow
-
-1. Extract the document ID from the provided Google Docs URL.
-2. Build the Google export URL for each tab.
-3. Download the exported HTML.
-4. Save raw HTML into `media/migration/raw_<tab_id>.html`.
-5. Parse the exported HTML to get:
-   - page title
-   - page body
-   - image list
-6. Download images from remote URLs or decode base64 data URLs.
-7. Save imported images under `media/pages/imports/<slug>/`.
-8. Clean Google Docs-specific markup:
-   - remove `<style>` tags
-   - remove `class`, `id`, and inline `style` attributes
-   - unwrap spans
-   - remove empty tags
-9. Replace image `src` attributes with local media URLs.
-10. Create a `Page` record for the selected site.
-11. Store the cleaned HTML in `Page.content`.
-
-### Output Artifacts
-- Raw exports: `media/migration/`
-- Imported images: `media/pages/imports/`
-- Database output: rows in `pages_page`
-
-## Local Setup
-
-### 1. Clone the repository
+### Installation
 
 ```bash
 git clone https://github.com/sourav-islam/siteCraft_website_builder.git
 cd siteCraft_website_builder
-```
-
-### 2. Create and activate a virtual environment
-
-```bash
 python -m venv .venv
 source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
 ```
 
-### 3. Install dependencies
-
-```bash
-pip install -r requirements.txt
-```
-
-### 4. Create environment variables
-
-Create a `.env` file in the project root and set at least the following values:
+Create `.env` in the repository root. The values below match the supplied
+Compose services:
 
 ```env
+APP_ENV=canary
 DEBUG=True
-SECRET_KEY=your-secret-key
+SECRET_KEY=replace-me-for-local-development
 ALLOWED_HOSTS=127.0.0.1,localhost
+
 DB_NAME=sitecraft_db
 DB_USER=sitecraft_user
 DB_PASSWORD=sitecraft_password
 DB_HOST=localhost
 DB_PORT=5432
+
 REDIS_HOST=localhost
 REDIS_PORT=6379
+REDIS_DB=0
+LOCK_TTL=120
 ```
 
-### 5. Start PostgreSQL and Redis
+`APP_ENV` controls the media directory: files are written under
+`media/<APP_ENV>/`. Only `canary`, `beta`, and `production` are accepted.
+
+Start infrastructure, migrate the database, and run Django:
 
 ```bash
 docker compose up -d
-```
-
-### 6. Apply database migrations
-
-```bash
+python manage.py check
 python manage.py migrate
-```
-
-### 7. Create a superuser (optional)
-
-```bash
-python manage.py createsuperuser
-```
-
-### 8. Run the development server
-
-```bash
+python manage.py createsuperuser  # optional
 python manage.py runserver
 ```
 
-Admin:
-- `http://127.0.0.1:8000/admin/`
+The local endpoints are:
 
-## Database Notes
+- API: `http://127.0.0.1:8000/api/v1/`
+- Admin: `http://127.0.0.1:8000/admin/`
+- Published site: `http://127.0.0.1:8000/sites/<site-id>/published/`
 
-This project is configured to use PostgreSQL as the main database. The
-recommended local setup is to run PostgreSQL through Docker Compose, using the
-values from the `.env` file.
+API paths intentionally do not use trailing slashes. `APPEND_SLASH` is
+disabled, so clients should use the paths exactly as shown below.
 
-SQLite is not the intended database option for this project.
+## API
 
-## Typical Development Flow
+Authentication is required by default. Registration, login, token refresh,
+health, and published rendering are public. Site and page resources are scoped
+to the authenticated owner.
 
-1. Start the database services.
-2. Install dependencies.
-3. Apply migrations.
-4. Create a superuser if admin access is needed.
-5. Obtain a JWT token through the auth endpoints.
-6. Create a site through the API.
-7. Create pages manually or import them from Google Docs.
-8. Verify output in:
-   - admin
-   - database
-   - `media/` artifacts
+### Authentication and health
 
-## Example Migration Run
+| Method | Path | Purpose |
+| --- | --- | --- |
+| `POST` | `/api/v1/auth/register` | Create an account |
+| `POST` | `/api/v1/auth/login` | Obtain access and refresh tokens |
+| `POST` | `/api/v1/auth/login/refresh` | Rotate the access token |
+| `GET` | `/api/v1/auth/profile` | Read the current profile |
+| `PUT`, `PATCH` | `/api/v1/auth/profile` | Update the current profile |
+| `GET` | `/api/v1/health` | Health check |
+
+Registration requires `username`, `email`, `password`, and
+`password_confirm`; `first_name` and `last_name` are optional. Send the access
+token as `Authorization: Bearer <access-token>`.
+
+### Sites and pages
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| `GET`, `POST` | `/api/v1/sites` | List or create sites |
+| `GET`, `PUT`, `PATCH`, `DELETE` | `/api/v1/sites/<site-id>` | Manage one site |
+| `GET`, `POST`, `DELETE` | `/api/v1/sites/<site-id>/lock` | Read, acquire, or release a site lock |
+| `POST` | `/api/v1/sites/<site-id>/heartbeat` | Refresh a site lock TTL |
+| `POST` | `/api/v1/sites/<site-id>/publish` | Create a published version |
+| `POST` | `/api/v1/sites/<site-id>/rollback` | Point `current.json` to a prior version |
+| `GET`, `POST` | `/api/v1/sites/<site-id>/pages` | List or create pages |
+| `GET`, `PUT`, `PATCH`, `DELETE` | `/api/v1/sites/<site-id>/pages/<page-id>` | Manage one page |
+| `GET`, `POST`, `DELETE` | `/api/v1/sites/<site-id>/pages/<page-id>/lock` | Read, acquire, or release a page lock |
+| `POST` | `/api/v1/sites/<site-id>/pages/<page-id>/heartbeat` | Refresh a page lock TTL |
+| `GET` | `/api/v1/sites/<site-id>/audit-log` | Read site audit entries |
+
+Pages are nested under a site. Their `site`, `status`, `is_published`, audit
+timestamps, and creator/updater fields are server-managed. A page's HTML is
+uploaded through `html_file`; there is no JSON `content` field.
+
+Rollback expects a JSON body containing a positive version number:
+
+```json
+{"version": 2}
+```
+
+## Publishing and Rendering
+
+Before publishing, a site must have a header, footer, and at least one enabled
+page with an HTML file. Publishing creates an immutable version directory and a
+`current.json` pointer under:
+
+```text
+media/<APP_ENV>/published/<site-name>-<site-id>/
++-- current.json
++-- versions/<version-number>/
+  |-- manifest.json
+  |-- header.html
+  |-- footer.html
+  |-- global.css             # when configured
+  `-- pages/<page-slug>.html
+```
+
+Public rendering uses the current pointer and does not require JWT:
+
+- `GET /sites/<site-id>/published/` renders the `home` page.
+- `GET /sites/<site-id>/published/<page-slug>` renders a named page.
+
+The renderer currently reads published files from local storage. Put a reverse
+proxy or object storage in front of media for production deployments, and make
+sure published-site access is protected at the hosting layer if public access
+is not desired.
+
+## Google Docs Import
+
+`migrate_blog` imports tabs from a publicly accessible Google Docs document. It
+exports each tab, extracts the title, content, and images, downloads or decodes
+image assets, removes Google-specific markup, and creates one draft `Page` per
+tab. The cleaned HTML is stored in the page's `html_file`.
 
 ```bash
 python manage.py migrate_blog \
-  "https://docs.google.com/document/d/<doc-id>/edit" \
+  "https://docs.google.com/document/d/<document-id>/edit" \
   --site-id 1 \
   --tabs "t.0,t.1,t.2"
 ```
 
-Expected console flow per tab:
-- `Exporting...`
-- `Parsing...`
-- `Downloading images...`
-- `Cleaning content...`
-- `Creating page...`
-- `Page created with ID: N`
+Imported images and other runtime files are stored below the active environment
+media root. Tab IDs must currently be supplied manually, and the source
+document must be publicly exportable.
 
-## Current Limitations
-
-- Google Docs tab IDs must currently be collected manually.
-- Migration assumes the document is publicly accessible.
-- Imported content is stored as raw cleaned HTML inside a JSON wrapper.
-- Frontend rendering behavior for `{"html": ...}` depends on the consuming app.
-- Production-grade media serving is not yet documented in this repository.
-- Automated test coverage is still minimal.
-
-## Recommended Improvements
-
-- Add test coverage for exporters, parsers, and command execution.
-- Improve image download error reporting.
-- Add stronger HTML normalization/sanitization rules.
-- Document deployment with PostgreSQL and production media storage.
-- Add a renderer contract for imported HTML content.
-- Introduce idempotent import behavior or update mode for re-imports.
-
-## Useful Commands
+## Development Commands
 
 ```bash
-python manage.py migrate_blog "<doc-url>" --site-id 1 --tabs "t.0"
+python manage.py check
+python manage.py makemigrations --check
+python manage.py migrate
+python manage.py test
+ruff check .
+ruff format --check .
 ```
 
+The benchmark commands are available when investigating publish performance:
 
+```bash
+python manage.py benchmark_sync --site-id 1
+python manage.py benchmark_async --site-id 1
+python manage.py benchmark_multiprocessing --site-id 1
+python manage.py benchmark_sync_io --site-id 1
+```
 
+## Production Checklist
 
+- Set `DEBUG=False`, use a strong unique `SECRET_KEY`, and configure every
+  hostname in `ALLOWED_HOSTS`.
+- Use managed PostgreSQL and Redis or hardened private instances; do not keep
+  the Compose credentials in production.
+- Run `python manage.py check --deploy` as part of deployment validation.
+- Serve media and static files through a web server or object storage.
+- Back up PostgreSQL and the media root, including published versions.
+- Terminate TLS at the load balancer or reverse proxy.
+- Restrict admin access and monitor failed authentication, publishing, and
+  migration operations.
+- Review HTML upload and rendering policy before accepting untrusted content.
+
+The repository does not currently ship a production web-server configuration,
+static/media hosting configuration, CI pipeline, or secret-management setup.
