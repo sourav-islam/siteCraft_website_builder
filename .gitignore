@@ -3,8 +3,12 @@ __pycache__/
 *.pyc
 
 .env
+.env.*
+!.env.example
 
 db.sqlite3
+.coverage
+htmlcov/
 
 .idea/
 .vscode/

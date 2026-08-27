@@ -19,20 +19,20 @@ from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-load_dotenv(BASE_DIR / ".env")
-
 ALLOWED_APP_ENVIRONMENTS = ("canary", "beta", "production")
+
+configured_app_env = os.getenv("APP_ENV", "canary").strip().lower()
+environment_file = BASE_DIR / f".env.{configured_app_env}"
+load_dotenv(environment_file)
 
 
 def get_media_root(app_env):
     if app_env not in ALLOWED_APP_ENVIRONMENTS:
-        raise ImproperlyConfigured(
-            "APP_ENV must be one of: canary, beta, production."
-        )
+        raise ImproperlyConfigured("APP_ENV must be one of: canary, beta, production.")
     return BASE_DIR / "media" / app_env
 
 
-APP_ENV = os.getenv("APP_ENV", "canary").strip().lower()
+APP_ENV = os.getenv("APP_ENV", configured_app_env).strip().lower()
 MEDIA_ROOT = get_media_root(APP_ENV)
 
 # Quick-start development settings - unsuitable for production
