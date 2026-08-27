@@ -1,0 +1,12 @@
+.git
+.venv
+__pycache__
+*.pyc
+.coverage
+htmlcov
+.env
+.env.*
+!.env.example
+media
+staticfiles
+.ruff_cache

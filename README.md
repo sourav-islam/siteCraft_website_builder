@@ -47,6 +47,8 @@ apps/
 config/                 # Django settings and root URL configuration
 media/                  # Runtime media; generated environment output
 docker-compose.yml      # Local PostgreSQL and Redis services
+Dockerfile              # Django application image
+.dockerignore           # Docker build exclusions
 .env.<environment>      # Local environment-specific configuration
 manage.py               # Django administration entry point
 requirements.txt        # Pinned runtime and development dependencies
@@ -104,26 +106,23 @@ For example, use `sitecraft_beta`, port `5433`, and port `6380` for beta, and
 containers, networks, and named volumes. Only `canary`, `beta`, and
 `production` are accepted.
 
-Start infrastructure, migrate the database, and run Django:
+Build and start the complete canary stack (Django, PostgreSQL, and Redis):
 
 ```bash
-docker compose --env-file .env.canary up -d
-APP_ENV=canary python manage.py check
-APP_ENV=canary python manage.py migrate
-APP_ENV=canary python manage.py createsuperuser  # optional
-APP_ENV=canary python manage.py runserver 127.0.0.1:8000
+docker compose --env-file .env.canary up --build -d
+docker compose --env-file .env.canary exec web python manage.py check
+docker compose --env-file .env.canary exec web python manage.py migrate
+docker compose --env-file .env.canary exec web python manage.py createsuperuser  # optional
 ```
 
 Start beta or production by selecting its file explicitly:
 
 ```bash
-docker compose --env-file .env.beta up -d
-APP_ENV=beta python manage.py migrate
-APP_ENV=beta python manage.py runserver 127.0.0.1:8001
+docker compose --env-file .env.beta up --build -d
+docker compose --env-file .env.beta exec web python manage.py migrate
 
-docker compose --env-file .env.production up -d
-APP_ENV=production python manage.py migrate
-APP_ENV=production python manage.py runserver 127.0.0.1:8002
+docker compose --env-file .env.production up --build -d
+docker compose --env-file .env.production exec web python manage.py migrate
 ```
 
 Because the three Compose projects use different host ports, they can run at
@@ -133,9 +132,20 @@ the same time. Stop one environment with its matching project configuration:
 docker compose --env-file .env.canary down
 ```
 
-When an environment-specific file exists, Django automatically loads
-`.env.<APP_ENV>`; shell variables take precedence. The Django process must
-use the same environment as the Compose stack.
+The `web` container runs Gunicorn on port `8000` internally. Compose maps that
+port to `8000` for canary, `8001` for beta, and `8002` for production. Inside
+Docker, Django connects to the `db` and `redis` service names; the host ports
+in the environment files are for host-side tools only. When an
+environment-specific file exists, Django loads `.env.<APP_ENV>`; Compose also
+uses the selected file for interpolation and container variables.
+
+Run application commands inside the selected `web` container:
+
+```bash
+docker compose --env-file .env.canary exec web python manage.py test
+docker compose --env-file .env.canary exec web coverage run --source=. manage.py test
+docker compose --env-file .env.canary exec web coverage report -m
+```
 
 The local endpoints are:
 
@@ -243,20 +253,22 @@ document must be publicly exportable.
 ## Development Commands
 
 ```bash
-python manage.py check
-python manage.py makemigrations --check
-python manage.py migrate
-python manage.py test / coverage run --source=. manage.py test
-coverage report -m
-coverage html  # open htmlcov/index.html
+docker compose --env-file .env.canary exec web python manage.py check
+docker compose --env-file .env.canary exec web python manage.py makemigrations --check
+docker compose --env-file .env.canary exec web python manage.py migrate
+docker compose --env-file .env.canary exec web python manage.py test
+docker compose --env-file .env.canary exec web coverage run --source=. manage.py test
+docker compose --env-file .env.canary exec web coverage report -m
+docker compose --env-file .env.canary exec web coverage html
 ruff check .
 ruff format --check .
 ```
 
 Coverage is available through the `coverage` package in `requirements.txt`.
 Run `coverage report -m` to see missing lines, or open `htmlcov/index.html` for
-the detailed HTML report. Use the matching `APP_ENV` when testing beta or
-production.
+the detailed HTML report. Use the matching Compose env file when testing beta
+or production. The generated HTML report is inside the container; copy it to
+the host with `docker cp <container>:/app/htmlcov ./htmlcov` when needed.
 
 The benchmark commands are available when investigating publish performance:
 

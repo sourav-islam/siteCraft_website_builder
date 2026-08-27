@@ -1,4 +1,31 @@
 services:
+  web:
+    build:
+      context: .
+    env_file:
+      - .env.${APP_ENV:?APP_ENV is required}
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    command: gunicorn config.wsgi:application --bind 0.0.0.0:8000
+    ports:
+      - "${APP_PORT:?APP_PORT is required}:8000"
+    volumes:
+      - ./media/${APP_ENV:?APP_ENV is required}:/app/media/${APP_ENV:?APP_ENV is required}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
   db:
     image: postgres:16-alpine
     environment:
@@ -9,6 +36,11 @@ services:
       - "${DB_PORT:?DB_PORT is required}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   redis:
     image: redis:7-alpine
@@ -16,6 +48,11 @@ services:
       - "${REDIS_PORT:?REDIS_PORT is required}:6379"
     volumes:
       - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
     restart: always
 
 volumes:

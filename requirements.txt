@@ -4,6 +4,7 @@ certifi==2026.7.22
 charset-normalizer==3.5.1
 coverage==7.15.4
 Django==6.0.7
+gunicorn==24.0.0
 djangorestframework==3.17.1
 djangorestframework_simplejwt==5.5.1
 idna==3.19
